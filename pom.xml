@@ -11,8 +11,8 @@
 	<groupId>com.pulsewallet</groupId>
 	<artifactId>pulsewallet</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name/>
-	<description/>
+	<name>PulseWallet</name>
+	<description>AI-assisted personal finance platform: budgeting, forecasting and real-time fraud detection</description>
 	<url/>
 	<licenses>
 		<license/>
@@ -41,6 +41,13 @@
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-webmvc</artifactId>
+		</dependency>
+
+		<!-- Health, info and metrics endpoints under /actuator.
+		     Exposed fully in the dev profile, restricted to health+info in prod. -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-actuator</artifactId>
 		</dependency>
 
 		<dependency>
