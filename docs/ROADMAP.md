@@ -38,11 +38,11 @@ Milestones 3 and 4 run in parallel, as do 4/5 and 6. That parallelism is what ma
 
 **Evidence to show your guide:** a clean `git clone` on a machine that has never run this project, followed by `docker compose up -d --wait`, `./mvnw spring-boot:run`, and a `/api/health` response with `"database": "UP"`. Time it in front of them.
 
-**Open decisions before Milestone 2:**
+**Open decisions before Milestone 2 — resolved:**
 
-- **Project name.** Product is *FlexGuard*; artifact, package (`com.pulsewallet.pulsewallet`) and repository are *PulseWallet*. Rename now or commit to the mismatch — the cost only rises as classes accumulate.
-- **Migration tool.** Flyway (plain SQL, easier to defend in a viva) or Liquibase (XML/YAML changelogs). Pick before writing entities.
-- **API documentation.** Whether to add Swagger UI. Verify springdoc-openapi supports Spring Boot 4 before committing to it.
+- **Project name.** Still unresolved. Product is *FlexGuard*; artifact, package (`com.pulsewallet.pulsewallet`) and repository are *PulseWallet*. Milestone 2 went ahead under the existing `com.pulsewallet.pulsewallet` package rather than block on this, per "the cost only rises as classes accumulate" — it just rose. If you want the rename, do it now (IDE rename-refactor, not find-and-replace) before Milestone 3 adds more classes on top.
+- **Migration tool.** Resolved: Flyway. Plain SQL migrations under `src/main/resources/db/migration`, `V1`–`V5`.
+- **API documentation.** Still unresolved / not added. No Swagger/springdoc-openapi wired up yet — worth revisiting once the API surface is more final.
 
 ---
 
@@ -50,21 +50,22 @@ Milestones 3 and 4 run in parallel, as do 4/5 and 6. That parallelism is what ma
 
 **Weeks 3–4 · Deliverable: a user can register, log in, and add/view transactions via API.**
 
-- [ ] Design entities on paper first: `User`, `Transaction`, `Category`, `Budget` — settle fields, types and relationships before any code
-- [ ] Implement the four entities
-- [ ] Repositories for each entity
-- [ ] Add Flyway (or Liquibase) and write the baseline migration
-- [ ] **Switch `ddl-auto` to `validate` in both profiles** once migrations exist
-- [ ] `POST /api/auth/register` with BCrypt password hashing
-- [ ] `POST /api/auth/login` returning a JWT
-- [ ] `JwtService`, `JwtAuthenticationFilter`, `SecurityConfig`
-- [ ] Add `AuthenticationException` (401) and `AccessDeniedException` (403) handlers **above** the catch-all in `GlobalExceptionHandler`
-- [ ] Wire `CorsConfig` into the security filter chain via `http.cors(...)`
-- [ ] Transaction CRUD, scoped so a user can only ever see their own rows
-- [ ] Category CRUD with sensible seed categories
-- [ ] Request/response DTOs with Bean Validation
+- [x] Design entities on paper first: `User`, `Transaction`, `Category`, `Budget` — settle fields, types and relationships before any code
+- [x] Implement the four entities
+- [x] Repositories for each entity
+- [x] Add Flyway (or Liquibase) and write the baseline migration
+- [x] **Switch `ddl-auto` to `validate` in both profiles** once migrations exist
+- [x] `POST /api/auth/register` with BCrypt password hashing
+- [x] `POST /api/auth/login` returning a JWT
+- [x] `JwtService`, `JwtAuthenticationFilter`, `SecurityConfig`
+- [x] Add `AuthenticationException` (401) and `AccessDeniedException` (403) handlers **above** the catch-all in `GlobalExceptionHandler`
+- [x] Wire `CorsConfig` into the security filter chain via `http.cors(...)`
+- [x] Transaction CRUD, scoped so a user can only ever see their own rows
+- [x] Category CRUD with sensible seed categories
+- [x] Budget CRUD (limit + optional category + date range only — the recommendation engine is Milestone 3)
+- [x] Request/response DTOs with Bean Validation
 
-**Evidence:** a Postman collection or shell script that registers, logs in, creates a transaction with the token, and gets 401 without it.
+**Evidence:** a Postman collection or shell script that registers, logs in, creates a transaction with the token, and gets 401 without it. (Not run in the sandbox that implemented this — no Docker/Maven Central access there. Run `./mvnw clean verify` plus a manual `curl` pass locally to confirm; see the Testing section of the implementation report.)
 
 **Watch out:** Spring Boot 4 ships Spring Security 7. Most JWT tutorials online target Security 6 and will not compile. Work from the current reference docs, not blog posts. Budget real time for this — it is the most likely place to lose three days.
 

@@ -3,7 +3,11 @@ package com.pulsewallet.pulsewallet.config;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
@@ -19,10 +23,11 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
  * <p>Note that {@code allowCredentials(true)} forbids a {@code *} wildcard origin
  * per the CORS specification, which is why origins are listed explicitly.
  *
- * <p>When Spring Security arrives in Milestone 2, this configuration must be
- * referenced from the security filter chain via {@code http.cors(...)}, otherwise
- * the security filters reject preflight {@code OPTIONS} requests before MVC ever
- * applies these rules.
+ * <p>Exposes the same rule two ways, because Spring Security 7 does not read
+ * {@link WebMvcConfigurer}. {@code addCorsMappings} covers plain MVC; the
+ * {@link CorsConfigurationSource} bean is what {@code SecurityConfig} wires
+ * into {@code http.cors(...)} so the security filter chain applies the same
+ * origins before it ever rejects a preflight {@code OPTIONS} request.
  */
 @Configuration
 public class CorsConfig implements WebMvcConfigurer {
@@ -45,5 +50,21 @@ public class CorsConfig implements WebMvcConfigurer {
                 .allowCredentials(true)
                 // Cache preflight for an hour to cut request volume in the SPA.
                 .maxAge(3600);
+    }
+
+    /** Read by {@code SecurityConfig#securityFilterChain} via {@code http.cors(...)}. */
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+        configuration.setAllowedOrigins(allowedOrigins);
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+        configuration.setAllowedHeaders(List.of("*"));
+        configuration.setExposedHeaders(List.of("Authorization"));
+        configuration.setAllowCredentials(true);
+        configuration.setMaxAge(3600L);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/api/**", configuration);
+        return source;
     }
 }

@@ -15,7 +15,7 @@ The system helps users:
 - Generate fraud risk scores and security alerts
 - View financial planning and fraud information through a unified dashboard
 
-> **Status:** Milestone 1 complete (environment and foundation). The backend runs and connects to PostgreSQL; the data model, authentication, ML engines and frontend are not built yet. See [`docs/ROADMAP.md`](docs/ROADMAP.md) for the milestone-by-milestone plan.
+> **Status:** Milestones 1 and 2 complete; Milestone 3 (financial data layer) is implemented. The backend runs, connects to PostgreSQL via Flyway-managed migrations, and exposes JWT-secured CRUD plus date filtering and financial aggregation for transactions and categories. The budgeting/forecasting engine, fraud detection, dashboard integration, and frontend are not built yet. See [`docs/ROADMAP.md`](docs/ROADMAP.md) for the milestone-by-milestone plan.
 
 > **Note on naming:** the product is *FlexGuard*, but the Maven artifact, Java package (`com.pulsewallet.pulsewallet`) and Git repository are still named *PulseWallet*. This is deliberate for now — renaming touches every package declaration. Decide before Milestone 2 adds real classes, because the cost only goes up.
 
@@ -49,10 +49,17 @@ cp .env.example .env          # Windows cmd:        copy .env.example .env
 # 3. Start PostgreSQL (waits until the database actually accepts connections)
 docker compose up -d --wait
 
-# 4. Run the backend
+# 4. Export the JWT secret (Milestone 2). Spring Boot does not read .env files,
+#    and application.properties gives this one no default on purpose, so the
+#    app will not start without it set in your shell.
+export JWT_SECRET=$(grep JWT_SECRET= .env | cut -d '=' -f2)
+#    Windows PowerShell:
+#    $env:JWT_SECRET = (Select-String 'JWT_SECRET=' .env).Line.Split('=')[1]
+
+# 5. Run the backend
 ./mvnw spring-boot:run        # Windows: mvnw.cmd spring-boot:run
 
-# 5. Verify
+# 6. Verify
 curl http://localhost:8080/api/health
 ```
 
@@ -75,7 +82,7 @@ Expected response:
 
 `"database": "UP"` is the part that matters — it proves the app reached PostgreSQL. If it reads `DOWN`, jump to [Troubleshooting](#troubleshooting).
 
-You do **not** need to edit `.env` to get started. The `dev` profile ships defaults that match `docker-compose.yml` exactly.
+You do **not** need to edit `.env` to get started — the placeholder `JWT_SECRET` and every database value already match `docker-compose.yml`. You do need to **export** `JWT_SECRET` to your shell (step 4 above), since Spring Boot only reads real environment variables, not the `.env` file itself.
 
 ### Useful commands
 
@@ -90,7 +97,10 @@ docker compose logs -f postgres          # tail database logs
 ./mvnw spring-boot:run -Dspring-boot.run.profiles=prod        # run with prod profile
 ./mvnw clean verify                                           # compile + run tests
 ./mvnw clean package                                          # build the jar
+./mvnw clean package -DskipTests                              # build without tests
 ```
+
+> `./mvnw clean verify` starts a full Spring context, which needs a reachable database. Run `docker compose up -d --wait` first, or the test fails on connection refused rather than on anything you broke.
 
 ---
 
@@ -119,21 +129,34 @@ SPRING_PROFILES_ACTIVE=prod java -jar target/pulsewallet-0.0.1-SNAPSHOT.jar
 
 ## API endpoints
 
-Only the health endpoint exists today. The rest arrive with their milestones.
+Milestones 1 and 2 are implemented. The rest arrive with their milestones.
 
-| Method | Path | Milestone | Description |
-|---|---|---|---|
-| `GET` | `/api/health` | 1 ✅ | Liveness plus live database check |
-| `GET` | `/actuator/health` | 1 ✅ | Actuator health (full detail in `dev` only) |
-| `POST` | `/api/auth/register` | 2 | Create an account |
-| `POST` | `/api/auth/login` | 2 | Obtain a JWT |
-| `GET`/`POST` | `/api/transactions` | 2 | List / create transactions |
-| `GET`/`POST` | `/api/categories` | 2 | List / create categories |
-| `POST` | `/api/budget/plan` | 3 | Salary + expenses → budget breakdown |
-| `GET` | `/api/forecast` | 3 | Spending forecast from history |
-| `GET` | `/api/advisory` | 3 | Savings and investment suggestions |
-| `POST` | `/api/fraud-check` | 4 | Transaction → fraud risk score |
-| `GET` | `/api/dashboard-summary` | 5 | Combined budgeting + fraud view |
+| Method | Path | Milestone | Auth | Description |
+|---|---|---|---|---|
+| `GET` | `/api/health` | 1 ✅ | Public | Liveness plus live database check |
+| `GET` | `/actuator/health` | 1 ✅ | Public | Actuator health (full detail in `dev` only) |
+| `POST` | `/api/auth/register` | 2 ✅ | Public | Create an account, returns a JWT |
+| `POST` | `/api/auth/login` | 2 ✅ | Public | Exchange email + password for a JWT |
+| `GET` | `/api/transactions` | 3 ✅ | JWT | Page through the caller's transactions; optional `from` and `to` ISO dates |
+| `POST` | `/api/transactions` | 2 ✅ | JWT | Create a transaction |
+| `GET`/`PUT`/`DELETE` | `/api/transactions/{id}` | 2 ✅ | JWT | Read / update / delete one transaction |
+| `GET` | `/api/transactions/summary` | 3 ✅ | JWT | Income, expenses, disposable income, period, monthly, and category totals; optional `from` and `to` |
+| `GET` | `/api/categories` | 3 ✅ | JWT | System defaults + the caller's own categories |
+| `POST` | `/api/categories` | 2 ✅ | JWT | Create a category |
+| `GET`/`PUT`/`DELETE` | `/api/categories/{id}` | 2 ✅ | JWT | Read / update / delete one category (defaults are read-only) |
+| `GET` | `/api/budgets` | 2 ✅ | JWT | List the caller's budgets |
+| `POST` | `/api/budgets` | 2 ✅ | JWT | Create a budget (limit + date range) |
+| `GET`/`PUT`/`DELETE` | `/api/budgets/{id}` | 2 ✅ | JWT | Read / update / delete one budget |
+| `POST` | `/api/budget/plan` | 3 | JWT | Salary + expenses → budget breakdown |
+| `GET` | `/api/forecast` | 3 | JWT | Spending forecast from history |
+| `GET` | `/api/advisory` | 3 | JWT | Savings and investment suggestions |
+| `POST` | `/api/fraud-check` | 4 | JWT | Transaction → fraud risk score |
+| `GET` | `/api/dashboard-summary` | 5 | JWT | Combined budgeting + fraud view |
+
+`JWT` above means `Authorization: Bearer <token>`, obtained from `/api/auth/login` or
+`/api/auth/register`. A missing/invalid/expired token returns 401; every list/read/update/delete
+endpoint is scoped to the caller only - another user's transaction, category, or budget id
+returns 404, not 403 (see the Javadoc on `ResourceNotFoundException` for why).
 
 ### Response contract
 
@@ -306,18 +329,19 @@ PulseWallet/
     ├── main/
     │   ├── java/com/pulsewallet/pulsewallet/
     │   │   ├── PulsewalletApplication.java
-    │   │   ├── config/         # CorsConfig; later SecurityConfig, WebSocketConfig
+    │   │   ├── config/         # CorsConfig, SecurityConfig; later WebSocketConfig
     │   │   ├── controller/     # HTTP boundary - DTOs in, DTOs out
     │   │   ├── dto/            # ApiResponse, ApiError; request/response records
-    │   │   ├── entity/         # JPA entities (Milestone 2)
+    │   │   ├── entity/         # User, Category, Transaction, Budget, TransactionType
     │   │   ├── exception/      # GlobalExceptionHandler, custom exceptions
-    │   │   ├── repository/     # Spring Data JPA repositories (Milestone 2)
-    │   │   ├── security/       # JWT filter, UserDetailsService (Milestone 2)
-    │   │   └── service/        # business logic
+    │   │   ├── repository/     # Spring Data JPA repositories
+    │   │   ├── security/       # JWT filter/service, UserDetailsService, UserPrincipal
+    │   │   └── service/        # AuthService, CategoryService, TransactionService, BudgetService
     │   └── resources/
     │       ├── application.properties
     │       ├── application-dev.properties
-    │       └── application-prod.properties
+    │       ├── application-prod.properties
+    │       └── db/migration/   # Flyway - V1..V5, users/categories/transactions/budgets
     └── test/
         └── java/com/pulsewallet/pulsewallet/
 ```

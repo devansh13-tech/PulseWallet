@@ -6,8 +6,12 @@ import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -63,16 +67,68 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.BAD_REQUEST, ex.getMessage(), request, null);
     }
 
+    /** A business-rule uniqueness check failed (e.g. email already registered). */
+    @ExceptionHandler(DuplicateResourceException.class)
+    public ResponseEntity<ApiError> handleDuplicate(
+            DuplicateResourceException ex, HttpServletRequest request) {
+        return build(HttpStatus.CONFLICT, ex.getMessage(), request, null);
+    }
+
+    /**
+     * Belt-and-braces against a unique constraint firing at the database level
+     * (e.g. a race between two concurrent registrations for the same email
+     * that both passed the earlier {@code existsByEmail} check). The service
+     * layer should catch this first and rethrow as
+     * {@link DuplicateResourceException} with a friendlier message; this
+     * handler exists so an unmapped case still returns 409, not 500.
+     */
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ApiError> handleDataIntegrityViolation(
+            DataIntegrityViolationException ex, HttpServletRequest request) {
+        log.debug("Data integrity violation on {} {}",
+                request.getMethod(), request.getRequestURI(), ex);
+        return build(HttpStatus.CONFLICT, "This request conflicts with existing data", request, null);
+    }
+
+    /**
+     * Wrong email/password on {@code POST /api/auth/login}. Deliberately the
+     * same message whether the account does not exist or the password is
+     * wrong, so the response never confirms which emails are registered.
+     */
+    @ExceptionHandler(BadCredentialsException.class)
+    public ResponseEntity<ApiError> handleBadCredentials(
+            BadCredentialsException ex, HttpServletRequest request) {
+        return build(HttpStatus.UNAUTHORIZED, ex.getMessage(), request, null);
+    }
+
+    /**
+     * Any other authentication failure raised inside controller/service code
+     * rather than the JWT filter chain. Most 401s are produced earlier by
+     * {@code RestAuthenticationEntryPoint}; this covers the rest so nothing
+     * auth-related falls through to the generic 500 handler below.
+     */
+    @ExceptionHandler(AuthenticationException.class)
+    public ResponseEntity<ApiError> handleAuthentication(
+            AuthenticationException ex, HttpServletRequest request) {
+        return build(HttpStatus.UNAUTHORIZED, "Authentication failed", request, null);
+    }
+
+    /**
+     * Authenticated but not permitted - e.g. a {@code @PreAuthorize} check
+     * failing. Filter-chain-level access denials are handled by
+     * {@code RestAccessDeniedHandler} instead; this covers denials raised
+     * after the request reaches a controller.
+     */
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ApiError> handleAccessDenied(
+            AccessDeniedException ex, HttpServletRequest request) {
+        return build(HttpStatus.FORBIDDEN, "You do not have permission to access this resource", request, null);
+    }
+
     /**
      * Last-resort handler. Logs the full stack trace server-side and returns a
      * generic message, because exception text can expose library versions,
      * SQL, or file paths.
-     *
-     * <p>IMPORTANT for Milestone 2: once Spring Security is added, add explicit
-     * handlers for {@code AuthenticationException} (401) and
-     * {@code AccessDeniedException} (403) ABOVE this method. A catch-all on
-     * {@code Exception} will otherwise swallow them and report every auth
-     * failure as a 500.
      */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiError> handleUnexpected(Exception ex, HttpServletRequest request) {
