@@ -1,8 +1,8 @@
-# FlexGuard
+# PulseWallet
 
 ## Personal Financial Planning and Transaction Fraud Detection System
 
-FlexGuard is a full-stack financial management system that combines personal financial planning with transaction fraud detection.
+PulseWallet is a full-stack financial management system that combines personal financial planning with transaction fraud detection.
 
 The system helps users:
 
@@ -17,7 +17,7 @@ The system helps users:
 
 > **Status:** Milestones 1 and 2 complete; Milestone 3 (financial data layer) is implemented. The backend runs, connects to PostgreSQL via Flyway-managed migrations, and exposes JWT-secured CRUD plus date filtering and financial aggregation for transactions and categories. The budgeting/forecasting engine, fraud detection, dashboard integration, and frontend are not built yet. See [`docs/ROADMAP.md`](docs/ROADMAP.md) for the milestone-by-milestone plan.
 
-> **Note on naming:** the product is *FlexGuard*, but the Maven artifact, Java package (`com.pulsewallet.pulsewallet`) and Git repository are still named *PulseWallet*. This is deliberate for now — renaming touches every package declaration. Decide before Milestone 2 adds real classes, because the cost only goes up.
+> **Note on naming:** the product is *PulseWalet*, but the Maven artifact, Java package (`com.pulsewallet.pulsewallet`) and Git repository are still named *PulseWallet*. This is deliberate for now — renaming touches every package declaration. Decide before Milestone 2 adds real classes, because the cost only goes up.
 
 ---
 

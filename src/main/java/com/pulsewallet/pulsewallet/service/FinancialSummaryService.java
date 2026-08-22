@@ -12,6 +12,7 @@ import com.pulsewallet.pulsewallet.dto.FinancialSummaryResponse.AmountByCategory
 import com.pulsewallet.pulsewallet.dto.FinancialSummaryResponse.AmountByDate;
 import com.pulsewallet.pulsewallet.dto.FinancialSummaryResponse.CategoryMonthlyAmount;
 import com.pulsewallet.pulsewallet.dto.FinancialSummaryResponse.MonthlyAmount;
+import com.pulsewallet.pulsewallet.dto.FinancialSummaryResponse.MonthlyTypeAmount;
 import com.pulsewallet.pulsewallet.entity.TransactionType;
 import com.pulsewallet.pulsewallet.repository.TransactionRepository;
 
@@ -47,7 +48,8 @@ public class FinancialSummaryService {
                 periodAmounts(userId, TransactionType.EXPENSE, effectiveFrom, effectiveTo),
                 categoryAmounts(userId, effectiveFrom, effectiveTo),
                 monthlyAmounts(userId, effectiveFrom, effectiveTo),
-                categoryMonthlyAmounts(userId, effectiveFrom, effectiveTo));
+                categoryMonthlyAmounts(userId, effectiveFrom, effectiveTo),
+                monthlyTypeAmounts(userId, effectiveFrom, effectiveTo));
     }
 
     private BigDecimal total(Long userId, TransactionType type, LocalDate from, LocalDate to) {
@@ -79,4 +81,11 @@ public class FinancialSummaryService {
                         row.getYear(), row.getMonth(), row.getCategoryId(), row.getCategoryName(), row.getTotal()))
                 .toList();
     }
+
+    private List<MonthlyTypeAmount> monthlyTypeAmounts(Long userId, LocalDate from, LocalDate to) {
+        return transactionRepository.sumByMonthAndType(userId, from, to).stream()
+                .map(row -> new MonthlyTypeAmount(row.getYear(), row.getMonth(), row.getType(), row.getTotal()))
+                .toList();
+    }
 }
+

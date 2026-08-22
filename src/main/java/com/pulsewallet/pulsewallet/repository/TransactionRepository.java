@@ -86,4 +86,22 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
             @Param("userId") Long userId,
             @Param("from") LocalDate from,
             @Param("to") LocalDate to);
+
+    /**
+     * Monthly totals split by transaction type, so the financial summary can
+     * report monthly income and monthly expenses separately — the data M5's
+     * financial planning engine needs for disposable-income-by-month.
+     */
+    @Query("""
+            select year(t.transactionDate) as year, month(t.transactionDate) as month,
+                   t.type as type, sum(t.amount) as total
+            from Transaction t
+            where t.user.id = :userId and t.transactionDate between :from and :to
+            group by year(t.transactionDate), month(t.transactionDate), t.type
+            order by year(t.transactionDate), month(t.transactionDate), t.type
+            """)
+    java.util.List<MonthlyTypeTotalProjection> sumByMonthAndType(
+            @Param("userId") Long userId,
+            @Param("from") LocalDate from,
+            @Param("to") LocalDate to);
 }
