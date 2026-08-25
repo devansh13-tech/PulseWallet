@@ -76,6 +76,17 @@ def health_check():
         "feature_count": FEATURE_COUNT,
     }
 
+def calculate_risk_level(risk_score: float) -> str:
+    if risk_score < 20:
+        return "LOW"
+    elif risk_score < 50:
+        return "MEDIUM"
+    elif risk_score < 75:
+        return "HIGH"
+    else:
+        return "CRITICAL"
+
+    
 @app.post("/fraud-check")
 def fraud_check(transaction: FraudCheckRequest):
   
@@ -131,7 +142,12 @@ def fraud_check(transaction: FraudCheckRequest):
     
     is_fraud = fraud_probability >= 0.5
 
+    risk_score = fraud_probability * 100
+    risk_level = calculate_risk_level(risk_score)
+
     return {
         "is_fraud": bool(is_fraud),
         "fraud_probability": float(fraud_probability),
-    }
+        "risk_score": round(float(risk_score), 2),
+        "risk_level": risk_level,
+}
