@@ -7,14 +7,19 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.pulsewallet.pulsewallet.dto.FraudCheckRequest;
+import com.pulsewallet.pulsewallet.dto.FraudCheckResponse;
 import com.pulsewallet.pulsewallet.dto.TransactionRequest;
 import com.pulsewallet.pulsewallet.dto.TransactionResponse;
 import com.pulsewallet.pulsewallet.entity.Category;
+import com.pulsewallet.pulsewallet.entity.FraudAlert;
+import com.pulsewallet.pulsewallet.entity.FraudAlert.RiskLevel;
 import com.pulsewallet.pulsewallet.entity.Transaction;
 import com.pulsewallet.pulsewallet.entity.TransactionType;
 import com.pulsewallet.pulsewallet.entity.User;
 import com.pulsewallet.pulsewallet.exception.ResourceNotFoundException;
 import com.pulsewallet.pulsewallet.repository.CategoryRepository;
+import com.pulsewallet.pulsewallet.repository.FraudAlertRepository;
 import com.pulsewallet.pulsewallet.repository.TransactionRepository;
 import com.pulsewallet.pulsewallet.repository.UserRepository;
 
@@ -31,16 +36,22 @@ public class TransactionService {
     private final CategoryRepository categoryRepository;
     private final UserRepository userRepository;
     private final ExpenseCategorizationService expenseCategorizationService;
+    private final FraudDetectionService fraudDetectionService;
+    private final FraudAlertRepository fraudAlertRepository;
 
     public TransactionService(
             TransactionRepository transactionRepository,
             CategoryRepository categoryRepository,
             UserRepository userRepository,
-            ExpenseCategorizationService expenseCategorizationService) {
+            ExpenseCategorizationService expenseCategorizationService,
+            FraudDetectionService fraudDetectionService,
+            FraudAlertRepository fraudAlertRepository) {
         this.transactionRepository = transactionRepository;
         this.categoryRepository = categoryRepository;
         this.userRepository = userRepository;
         this.expenseCategorizationService = expenseCategorizationService;
+        this.fraudDetectionService = fraudDetectionService;
+        this.fraudAlertRepository = fraudAlertRepository;
     }
 
     @Transactional(readOnly = true)
@@ -84,7 +95,9 @@ public class TransactionService {
                 category,
                 request.type(),
                 request.transactionDate());
-        return TransactionResponse.from(transactionRepository.save(transaction));
+        Transaction saved = transactionRepository.save(transaction);
+        triggerFraudCheckIfNeeded(saved, request);
+        return TransactionResponse.from(saved);
     }
 
     @Transactional
@@ -101,6 +114,7 @@ public class TransactionService {
         transaction.setCategory(category);
         transaction.setType(request.type());
         transaction.setTransactionDate(request.transactionDate());
+        triggerFraudCheckIfNeeded(transaction, request);
         return TransactionResponse.from(transaction);
     }
 
@@ -128,5 +142,34 @@ public class TransactionService {
             throw new ResourceNotFoundException("Category", categoryId);
         }
         return category;
+    }
+
+    private void triggerFraudCheckIfNeeded(Transaction transaction, TransactionRequest request) {
+        if (fraudDetectionService == null || transaction.getType() != TransactionType.EXPENSE) {
+            return;
+        }
+
+        FraudCheckRequest fraudRequest = FraudCheckRequest.safeFallback(
+                transaction.getTransactionDate(),
+                transaction.getAmount().doubleValue());
+
+        FraudCheckResponse response = fraudDetectionService.checkFraud(fraudRequest);
+        if (response != null && response.isFraud()
+                && !fraudAlertRepository.existsByTransactionId(transaction.getId())) {
+            fraudAlertRepository.save(new FraudAlert(
+                    transaction,
+                    transaction.getUser(),
+                    java.math.BigDecimal.valueOf(response.fraudProbability()),
+                    java.math.BigDecimal.valueOf(response.riskScore()),
+                    toRiskLevel(response.riskLevel())));
+        }
+    }
+
+    private RiskLevel toRiskLevel(String riskLevel) {
+        try {
+            return RiskLevel.valueOf(riskLevel);
+        } catch (IllegalArgumentException | NullPointerException exception) {
+            return RiskLevel.HIGH;
+        }
     }
 }

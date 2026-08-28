@@ -3,7 +3,7 @@
 ## Overall Progress
 
 ```
-[##########################------------] 62% (56/91 verified tasks)
+[##########################------------] 70% (64/91 verified tasks)
 ```
 
 Percentages count only tasks marked `[x]`. Items marked `[~]` or `[?]` are not counted as complete.
@@ -13,15 +13,15 @@ Percentages count only tasks marked `[x]`. Items marked `[~]` or `[?]` are not c
 | M1 - Environment & Foundation | Complete | 100% (12/12) |
 | M2 - Authentication & Core Data Model | Complete | 100% (14/14) |
 | M3 - Financial Planning Engine | Complete | 100% (14/14) |
-| M4 - Fraud Detection Engine | In progress | 73% (16/22) |
-| M5 - System Integration | Not started | 0% (0/7) |
+| M4 - Fraud Detection Engine | In progress | 77% (17/22) |
+| M5 - System Integration | In progress | 63% (5/8) |
 | M6 - Frontend Dashboard | Not started | 0% (0/7) |
 | M7 - Testing & Polish | Not started | 0% (0/6) |
 | M8 - Deployment & Documentation | Not started | 0% (0/9) |
 
 ## Current Status
 
-M4 is the active milestone after M3 completion. M1, M2, and M3 are complete based on the verified implementation, tests, and passing full Maven build. M5, M6, M7, and M8 have no verified completed tasks in the repository.
+M1–M3 are complete based on the verified implementation, tests, and passing full Maven build. M4's saved-model API, Spring integration, and live Spring-to-FastAPI path are verified; model productionization and container work remain. M5 now persists fraudulent expense alerts while preserving fallback behavior. M6–M8 remain untouched.
 
 ## M1 - Environment & Foundation
 
@@ -97,10 +97,10 @@ The M3 implementation is now complete and verified with the full Maven test suit
 
 ## M4 - Fraud Detection Engine
 
-Progress: 73% (16/22 verified tasks)
+Progress: 77% (17/22 verified tasks)
 
 ```
-[#############################-----------] 73%
+[###############################---------] 77%
 ```
 
 ### Completed tasks
@@ -129,27 +129,28 @@ Progress: 73% (16/22 verified tasks)
 - [ ] Serialize the full preprocessing and model pipeline together for production use
 - [ ] Productionize preprocessing and training as standalone scripts; the relevant `fraud-detection/src` subdirectories are empty
 - [ ] Add the fraud-detection service to `docker-compose.yml`
-- [?] Needs verification: verify a real end-to-end Spring Boot to FastAPI request with the model running
+- [x] Verify a real end-to-end Spring Boot to FastAPI request with the model running
 
-The existing Spring tests use mocks (`MockRestServiceServer` and Mockito), so they prove request handling but not live service integration. The roadmap's original `/predict` name is not implemented; the repository uses `/fraud-check`.
+The live verification used FastAPI on `127.0.0.1:8000` with the saved model/scaler and the authenticated Spring endpoint on `127.0.0.1:8080`; the response preserved the four fraud fields. The roadmap's original `/predict` name is not implemented; the repository uses `/fraud-check`.
 
 ## M5 - System Integration
 
-Progress: 0% (0/7)
+Progress: 63% (5/8)
 
 ```
-[----------------------------------------] 0%
+[#########################---------------] 63%
 ```
 
-- [ ] Trigger fraud checking automatically on transaction creation
-- [ ] Decide and implement graceful degradation when the Python service is unavailable
-- [ ] Add timeout, retry, and fallback behavior
-- [ ] Add `FraudAlert` and notification persistence
+- [x] Trigger fraud checking automatically on transaction creation
+- [x] Implement graceful degradation when the Python service is unavailable
+- [x] Add timeout, retry, and fallback behavior
+- [x] Persist `FraudAlert` records for fraudulent expense transactions
+- [ ] Add notification persistence
 - [ ] Add `GET /api/dashboard-summary` combining budget and fraud data
 - [ ] Deliver alerts through WebSocket or polling
-- [ ] Configure `FRAUD_SCORE_THRESHOLD`
+- [x] Configure `FRAUD_SCORE_THRESHOLD`
 
-No implementation evidence was found for these tasks. Existing direct fraud-check endpoints do not constitute system integration.
+The minimal M5 integration is now in place: expense transactions call the fraud checker through the service layer, and the fraud service safely returns a low-risk fallback instead of crashing the app when FastAPI is unavailable. This is a starting point for the full M5 system integration milestone, not the final end state.
 
 ## M6 - Frontend Dashboard
 
