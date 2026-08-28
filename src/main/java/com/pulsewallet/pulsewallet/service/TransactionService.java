@@ -11,6 +11,7 @@ import com.pulsewallet.pulsewallet.dto.TransactionRequest;
 import com.pulsewallet.pulsewallet.dto.TransactionResponse;
 import com.pulsewallet.pulsewallet.entity.Category;
 import com.pulsewallet.pulsewallet.entity.Transaction;
+import com.pulsewallet.pulsewallet.entity.TransactionType;
 import com.pulsewallet.pulsewallet.entity.User;
 import com.pulsewallet.pulsewallet.exception.ResourceNotFoundException;
 import com.pulsewallet.pulsewallet.repository.CategoryRepository;
@@ -29,14 +30,17 @@ public class TransactionService {
     private final TransactionRepository transactionRepository;
     private final CategoryRepository categoryRepository;
     private final UserRepository userRepository;
+    private final ExpenseCategorizationService expenseCategorizationService;
 
     public TransactionService(
             TransactionRepository transactionRepository,
             CategoryRepository categoryRepository,
-            UserRepository userRepository) {
+            UserRepository userRepository,
+            ExpenseCategorizationService expenseCategorizationService) {
         this.transactionRepository = transactionRepository;
         this.categoryRepository = categoryRepository;
         this.userRepository = userRepository;
+        this.expenseCategorizationService = expenseCategorizationService;
     }
 
     @Transactional(readOnly = true)
@@ -68,6 +72,9 @@ public class TransactionService {
     public TransactionResponse create(Long userId, TransactionRequest request) {
         User user = userRepository.getReferenceById(userId);
         Category category = resolveCategory(request.categoryId(), userId);
+        if (category == null && request.type() == TransactionType.EXPENSE) {
+            category = expenseCategorizationService.categorize(request.description(), userId);
+        }
         Transaction transaction = new Transaction(
                 user,
                 request.amount(),
@@ -84,6 +91,9 @@ public class TransactionService {
     public TransactionResponse update(Long id, Long userId, TransactionRequest request) {
         Transaction transaction = requireOwned(id, userId);
         Category category = resolveCategory(request.categoryId(), userId);
+        if (category == null && request.type() == TransactionType.EXPENSE) {
+            category = expenseCategorizationService.categorize(request.description(), userId);
+        }
         transaction.setAmount(request.amount());
         transaction.setDescription(request.description());
         transaction.setMerchant(request.merchant());

@@ -15,9 +15,12 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.pulsewallet.pulsewallet.dto.ApiResponse;
+import com.pulsewallet.pulsewallet.dto.BudgetPlanRequest;
+import com.pulsewallet.pulsewallet.dto.BudgetPlanResponse;
 import com.pulsewallet.pulsewallet.dto.BudgetRequest;
 import com.pulsewallet.pulsewallet.dto.BudgetResponse;
 import com.pulsewallet.pulsewallet.security.UserPrincipal;
+import com.pulsewallet.pulsewallet.service.BudgetPlanService;
 import com.pulsewallet.pulsewallet.service.BudgetService;
 
 import jakarta.validation.Valid;
@@ -32,9 +35,18 @@ import jakarta.validation.Valid;
 public class BudgetController {
 
     private final BudgetService budgetService;
+    private final BudgetPlanService budgetPlanService;
 
-    public BudgetController(BudgetService budgetService) {
+    public BudgetController(BudgetService budgetService, BudgetPlanService budgetPlanService) {
         this.budgetService = budgetService;
+        this.budgetPlanService = budgetPlanService;
+    }
+
+    @PostMapping("/plan")
+    public ApiResponse<BudgetPlanResponse> plan(
+            @Valid @RequestBody BudgetPlanRequest request,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        return ApiResponse.ok("Budget plan generated", budgetPlanService.createPlan(principal.getId(), request));
     }
 
     @GetMapping

@@ -1,5 +1,7 @@
 package com.pulsewallet.pulsewallet.config;
 
+import java.time.Clock;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.Customizer;
@@ -22,12 +24,14 @@ import com.pulsewallet.pulsewallet.security.RestAuthenticationEntryPoint;
  * hashing, and a single rule set - {@code /api/auth/**}, the health check,
  * and Actuator are public; everything else requires a valid bearer token.
  *
- * <p>Built for Spring Security 7 (ships with Spring Boot 4). Most JWT
+ * <p>
+ * Built for Spring Security 7 (ships with Spring Boot 4). Most JWT
  * tutorials online target Security 6 and use APIs removed here (e.g.
  * {@code WebSecurityConfigurerAdapter}); this class intentionally avoids
  * those.
  *
- * <p>Deliberately has no {@code AuthenticationManager}/
+ * <p>
+ * Deliberately has no {@code AuthenticationManager}/
  * {@code DaoAuthenticationProvider} bean: {@code AuthService} checks
  * credentials directly against {@link CustomUserDetailsService} and
  * {@link PasswordEncoder} rather than going through
@@ -58,6 +62,11 @@ public class SecurityConfig {
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
+    }
+
+    @Bean
+    public Clock clock() {
+        return Clock.systemDefaultZone();
     }
 
     @Bean
