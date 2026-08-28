@@ -1,4 +1,5 @@
 from pathlib import Path
+import os
 
 import joblib
 import numpy as np
@@ -19,6 +20,22 @@ SCALER_PATH = BASE_DIR / "models" / "fraud_scaler.joblib"
 
 model = joblib.load(MODEL_PATH)
 scaler = joblib.load(SCALER_PATH)
+
+
+def load_fraud_threshold() -> float:
+    raw_threshold = os.getenv("FRAUD_SCORE_THRESHOLD", "0.5")
+    try:
+        threshold = float(raw_threshold)
+    except ValueError as error:
+        raise ValueError("FRAUD_SCORE_THRESHOLD must be a number between 0 and 1") from error
+
+    if not 0.0 <= threshold <= 1.0:
+        raise ValueError("FRAUD_SCORE_THRESHOLD must be between 0 and 1")
+
+    return threshold
+
+
+FRAUD_THRESHOLD = load_fraud_threshold()
 
 class FraudCheckRequest(BaseModel):
     Time: float
@@ -140,7 +157,7 @@ def fraud_check(transaction: FraudCheckRequest):
     fraud_probability = model.predict_proba(model_input)[0][1]
 
     
-    is_fraud = fraud_probability >= 0.5
+    is_fraud = fraud_probability >= FRAUD_THRESHOLD
 
     risk_score = fraud_probability * 100
     risk_level = calculate_risk_level(risk_score)
