@@ -14,12 +14,14 @@ import com.pulsewallet.pulsewallet.dto.TransactionResponse;
 import com.pulsewallet.pulsewallet.entity.Category;
 import com.pulsewallet.pulsewallet.entity.FraudAlert;
 import com.pulsewallet.pulsewallet.entity.FraudAlert.RiskLevel;
+import com.pulsewallet.pulsewallet.entity.Notification;
 import com.pulsewallet.pulsewallet.entity.Transaction;
 import com.pulsewallet.pulsewallet.entity.TransactionType;
 import com.pulsewallet.pulsewallet.entity.User;
 import com.pulsewallet.pulsewallet.exception.ResourceNotFoundException;
 import com.pulsewallet.pulsewallet.repository.CategoryRepository;
 import com.pulsewallet.pulsewallet.repository.FraudAlertRepository;
+import com.pulsewallet.pulsewallet.repository.NotificationRepository;
 import com.pulsewallet.pulsewallet.repository.TransactionRepository;
 import com.pulsewallet.pulsewallet.repository.UserRepository;
 
@@ -38,6 +40,7 @@ public class TransactionService {
     private final ExpenseCategorizationService expenseCategorizationService;
     private final FraudDetectionService fraudDetectionService;
     private final FraudAlertRepository fraudAlertRepository;
+    private final NotificationRepository notificationRepository;
 
     public TransactionService(
             TransactionRepository transactionRepository,
@@ -45,13 +48,15 @@ public class TransactionService {
             UserRepository userRepository,
             ExpenseCategorizationService expenseCategorizationService,
             FraudDetectionService fraudDetectionService,
-            FraudAlertRepository fraudAlertRepository) {
+            FraudAlertRepository fraudAlertRepository,
+            NotificationRepository notificationRepository) {
         this.transactionRepository = transactionRepository;
         this.categoryRepository = categoryRepository;
         this.userRepository = userRepository;
         this.expenseCategorizationService = expenseCategorizationService;
         this.fraudDetectionService = fraudDetectionService;
         this.fraudAlertRepository = fraudAlertRepository;
+        this.notificationRepository = notificationRepository;
     }
 
     @Transactional(readOnly = true)
@@ -154,15 +159,32 @@ public class TransactionService {
                 transaction.getAmount().doubleValue());
 
         FraudCheckResponse response = fraudDetectionService.checkFraud(fraudRequest);
-        if (response != null && response.isFraud()
-                && !fraudAlertRepository.existsByTransactionId(transaction.getId())) {
-            fraudAlertRepository.save(new FraudAlert(
-                    transaction,
-                    transaction.getUser(),
-                    java.math.BigDecimal.valueOf(response.fraudProbability()),
-                    java.math.BigDecimal.valueOf(response.riskScore()),
-                    toRiskLevel(response.riskLevel())));
+        if (response == null || !response.isFraud()) {
+            return;
         }
+        if (fraudAlertRepository.existsByTransactionId(transaction.getId())) {
+            return;
+        }
+
+        FraudAlert savedAlert = fraudAlertRepository.save(new FraudAlert(
+                transaction,
+                transaction.getUser(),
+                java.math.BigDecimal.valueOf(response.fraudProbability()),
+                java.math.BigDecimal.valueOf(response.riskScore()),
+                toRiskLevel(response.riskLevel())));
+
+        if (notificationRepository.existsByTransactionId(transaction.getId())
+                || notificationRepository.existsByFraudAlertId(savedAlert.getId())) {
+            return;
+        }
+
+        notificationRepository.save(new Notification(
+                transaction.getUser(),
+                "Suspicious transaction detected",
+                "A potentially fraudulent transaction of ₹%s was detected.".formatted(transaction.getAmount()),
+                com.pulsewallet.pulsewallet.entity.NotificationType.FRAUD_ALERT,
+                transaction,
+                savedAlert));
     }
 
     private RiskLevel toRiskLevel(String riskLevel) {

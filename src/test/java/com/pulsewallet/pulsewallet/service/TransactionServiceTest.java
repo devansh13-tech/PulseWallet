@@ -29,6 +29,7 @@ import com.pulsewallet.pulsewallet.entity.User;
 import com.pulsewallet.pulsewallet.exception.ResourceNotFoundException;
 import com.pulsewallet.pulsewallet.repository.CategoryRepository;
 import com.pulsewallet.pulsewallet.repository.FraudAlertRepository;
+import com.pulsewallet.pulsewallet.repository.NotificationRepository;
 import com.pulsewallet.pulsewallet.repository.TransactionRepository;
 import com.pulsewallet.pulsewallet.repository.UserRepository;
 import com.pulsewallet.pulsewallet.support.TestEntities;
@@ -57,6 +58,9 @@ class TransactionServiceTest {
         @Mock
         private FraudAlertRepository fraudAlertRepository;
 
+        @Mock
+        private NotificationRepository notificationRepository;
+
         private TransactionService transactionService;
         private User owner;
 
@@ -68,7 +72,8 @@ class TransactionServiceTest {
                                 userRepository,
                                 expenseCategorizationService,
                                 fraudDetectionService,
-                                fraudAlertRepository);
+                                fraudAlertRepository,
+                                notificationRepository);
                 owner = TestEntities.withId(new User("Ada", "ada@example.com", "hash"), OWNER_ID);
         }
 
@@ -229,6 +234,12 @@ class TransactionServiceTest {
                 when(fraudDetectionService.checkFraud(any()))
                                 .thenReturn(new FraudCheckResponse(true, 0.92, 92.0, "CRITICAL"));
                 when(fraudAlertRepository.existsByTransactionId(15L)).thenReturn(false);
+                when(notificationRepository.existsByTransactionId(15L)).thenReturn(false);
+                when(fraudAlertRepository.save(any(FraudAlert.class))).thenAnswer(invocation -> {
+                        FraudAlert alert = invocation.getArgument(0);
+                        return TestEntities.withId(alert, 55L);
+                });
+                when(notificationRepository.existsByFraudAlertId(55L)).thenReturn(false);
                 TransactionRequest request = new TransactionRequest(
                                 new BigDecimal("149.62"), "Suspicious purchase", null,
                                 TransactionType.EXPENSE, LocalDate.of(2026, 8, 8));
@@ -236,6 +247,7 @@ class TransactionServiceTest {
                 transactionService.create(OWNER_ID, request);
 
                 verify(fraudAlertRepository).save(any(FraudAlert.class));
+                verify(notificationRepository).save(any(com.pulsewallet.pulsewallet.entity.Notification.class));
         }
 
         @Test

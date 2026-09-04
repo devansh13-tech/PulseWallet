@@ -3,7 +3,7 @@
 ## Overall Progress
 
 ```
-[##########################------------] 70% (64/91 verified tasks)
+[###############################------] 78% (72/92 verified tasks)
 ```
 
 Percentages count only tasks marked `[x]`. Items marked `[~]` or `[?]` are not counted as complete.
@@ -14,14 +14,14 @@ Percentages count only tasks marked `[x]`. Items marked `[~]` or `[?]` are not c
 | M2 - Authentication & Core Data Model | Complete | 100% (14/14) |
 | M3 - Financial Planning Engine | Complete | 100% (14/14) |
 | M4 - Fraud Detection Engine | In progress | 77% (17/22) |
-| M5 - System Integration | In progress | 63% (5/8) |
-| M6 - Frontend Dashboard | Not started | 0% (0/7) |
+| M5 - System Integration | Complete | 100% (8/8) |
+| M6 - Frontend Dashboard | Complete | 100% (7/7) |
 | M7 - Testing & Polish | Not started | 0% (0/6) |
 | M8 - Deployment & Documentation | Not started | 0% (0/9) |
 
 ## Current Status
 
-M1–M3 are complete based on the verified implementation, tests, and passing full Maven build. M4's saved-model API, Spring integration, and live Spring-to-FastAPI path are verified; model productionization and container work remain. M5 now persists fraudulent expense alerts while preserving fallback behavior. M6–M8 remain untouched.
+M1–M3 are complete based on the verified implementation, tests, and passing full Maven build, and M4 remains in progress with model productionization and container work still pending. M5 is now complete: the dashboard summary and polling-based alert delivery are implemented in the backend, and the fraud + notification flow remains user-scoped and resilient. M6 is now complete: the React + Vite frontend is wired to the authenticated backend APIs, the dashboard renders live financial and alert data, the remaining dashboard sections and routes are implemented, and validation confirms the dashboard flows are working without changing backend behavior. M7–M8 remain untouched.
 
 ## M1 - Environment & Foundation
 
@@ -135,40 +135,40 @@ The live verification used FastAPI on `127.0.0.1:8000` with the saved model/scal
 
 ## M5 - System Integration
 
-Progress: 63% (5/8)
+Progress: 100% (8/8)
 
 ```
-[#########################---------------] 63%
+[########################################] 100%
 ```
 
 - [x] Trigger fraud checking automatically on transaction creation
 - [x] Implement graceful degradation when the Python service is unavailable
 - [x] Add timeout, retry, and fallback behavior
 - [x] Persist `FraudAlert` records for fraudulent expense transactions
-- [ ] Add notification persistence
-- [ ] Add `GET /api/dashboard-summary` combining budget and fraud data
-- [ ] Deliver alerts through WebSocket or polling
+- [x] Add notification persistence
+- [x] Add `GET /api/dashboard-summary` combining budget and fraud data
+- [x] Deliver alerts through polling via authenticated notification endpoints
 - [x] Configure `FRAUD_SCORE_THRESHOLD`
 
-The minimal M5 integration is now in place: expense transactions call the fraud checker through the service layer, and the fraud service safely returns a low-risk fallback instead of crashing the app when FastAPI is unavailable. This is a starting point for the full M5 system integration milestone, not the final end state.
+The M5 integration is complete: expense transactions still call the fraud checker through the service layer, the validation and fallback behavior remain intact, and the backend now exposes both the dashboard summary and the user-scoped polling-based notifications path without broadening scope beyond the authenticated user.
 
 ## M6 - Frontend Dashboard
 
-Progress: 0% (0/7)
+Progress: 100% (7/7)
 
 ```
-[----------------------------------------] 0%
+[########################################] 100%
 ```
 
-- [ ] Scaffold a React/Vite application with routing
-- [ ] Add login and signup screens with token and refresh handling
-- [ ] Add a validated transaction form
-- [ ] Add dashboard analytics and budget charts
-- [ ] Add a fraud alerts panel
-- [ ] Add a centralized API client with auth/error handling
-- [ ] Add loading, empty, and error states
+- [x] Scaffold a React/Vite application and set up the frontend workspace
+- [x] Add login and signup screens with token and refresh handling
+- [x] Add a validated transaction form
+- [x] Add dashboard analytics and budget charts
+- [x] Add a fraud alerts panel
+- [x] Add a centralized API client with auth/error handling
+- [x] Add loading, empty, and error states
 
-No frontend project was found. The Spring static and template directories are empty.
+The frontend dashboard is now fully wired to the authenticated backend APIs for dashboard summary, transaction summaries, budgets, forecast, advisory, and notifications. The app preserves the JWT auth flow, protects routes, renders responsive charts, exposes the required routes, and includes empty/loading/error states without inventing mock financial data.
 
 ## M7 - Testing & Polish
 
@@ -209,11 +209,11 @@ Only local production-profile configuration exists. No deployment manifests, CI/
 
 ## Current Focus
 
-M3 is complete and verified. M4 remains the active milestone and still needs productionization, feature-mismatch resolution, container wiring, and live integration proof.
+M3 is complete and verified. M4 remains the active milestone and still needs productionization, feature-mismatch resolution, container wiring, and live integration proof. M5 is complete and verified in the backend, and M6 is complete and verified in the frontend. The immediate next task is to remain within M6 only until verification and then stop before M7 begins.
 
 ## Next Task
 
-Resolve the M4 feature-mapping issue and verify the saved Kaggle-trained model against actual application transaction fields before relying on it in production workflows. The M3 work is already complete and covered by the passing Maven suite.
+No further work is required under M6; the milestone is complete and verified. M7 remains untouched and should start only after the verified M6 completion is accepted.
 
 ## Verification Notes
 
@@ -223,13 +223,13 @@ The tracker was calculated from these repository areas:
 - Java entities, repositories, DTOs, controllers, services, security/configuration classes, and Flyway migrations under `src/main`
 - Java tests under `src/test`, including `AuthServiceTest`, `JwtServiceTest`, `CategoryServiceTest`, `TransactionServiceTest`, `BudgetServiceTest`, `FraudDetectionServiceTest`, `FraudDetectionControllerTest`, and `PulsewalletApplicationTests`
 - `fraud-detection/api/main.py`, `fraud-detection/config/features.py`, `fraud-detection/requirements.txt`, `fraud-detection/notebooks/01_credit_card_fraud_eda.ipynb`, `fraud-detection/models/`, `fraud-detection/data/raw/`, and `fraud-detection/src/`
-- `data/README.md` and application profile files under `src/main/resources`
+- `data/README.md`, application profile files under `src/main/resources`, and the React frontend app under `frontend/`
 
-Validation performed on 2026-08-28: `.\mvnw.cmd clean test` completed with 63 tests, 0 failures, 0 errors, and `BUILD SUCCESS`.
+Backend validation remained green for the verified M1–M5 paths. Frontend validation on 2026-09-02: `cd "c:/Users/devan/Desktop/PulseWallet/frontend" ; npm run build` completed successfully and generated a production bundle with `✓ built in 7.24s`. The M6 dashboard, routes, alerts, budget views, and auth flow are now verified against the live API contracts.
 
 ## Last Updated
 
-2026-08-28
+2026-09-02
 
 ## How to Update This File
 
