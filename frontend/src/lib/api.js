@@ -161,9 +161,30 @@ export const budgetApi = {
   plan: (body) => request('/api/budgets/plan', { method: 'POST', body }),
 };
 
+/** Financial goals */
+export const goalApi = {
+  list: () => request('/api/goals'),
+  get: (id) => request(`/api/goals/${id}`),
+  create: (body) => request('/api/goals', { method: 'POST', body }),
+  update: (id, body) => request(`/api/goals/${id}`, { method: 'PUT', body }),
+  delete: (id) => request(`/api/goals/${id}`, { method: 'DELETE' }),
+};
+
 /** Dashboard summary */
 export const dashboardApi = {
   summary: () => request('/api/dashboard-summary'),
+};
+
+/** Dynamic, authenticated rules-engine recommendations */
+export const recommendationApi = {
+  get: () => request('/api/recommendations'),
+};
+
+/** Savings and investment intelligence */
+export const financialPlanApi = {
+  get: () => request('/api/financial-plan'),
+  profile: () => request('/api/investment-profile'),
+  save: (body) => request('/api/investment-profile', { method: 'PUT', body }),
 };
 
 /** Financial summary */
@@ -187,6 +208,17 @@ export const notificationApi = {
   unread: () => request('/api/notifications/unread'),
   unreadCount: () => request('/api/notifications/unread/count'),
   markRead: (id) => request(`/api/notifications/${id}/read`, { method: 'PATCH' }),
+};
+
+/** Credit cards */
+export const creditCardApi = {
+  list: () => request('/api/credit-cards'),
+  get: (id) => request(`/api/credit-cards/${id}`),
+  create: (body) => request('/api/credit-cards', { method: 'POST', body }),
+  update: (id, body) => request(`/api/credit-cards/${id}`, { method: 'PUT', body }),
+  delete: (id) => request(`/api/credit-cards/${id}`, { method: 'DELETE' }),
+  intelligence: () => request('/api/credit-cards/intelligence'),
+  purchaseCheck: (body) => request('/api/credit-cards/purchase-check', { method: 'POST', body }),
 };
 
 /** Exchange rates */

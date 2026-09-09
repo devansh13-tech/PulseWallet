@@ -17,10 +17,14 @@ import {
 import { useAuth } from './context/AuthContext'
 import {
   advisoryApi,
+  creditCardApi,
   dashboardApi,
   exchangeRateApi,
   forecastApi,
+  financialPlanApi,
+  goalApi,
   notificationApi,
+  recommendationApi,
   summaryApi,
   transactionApi,
 } from './lib/api'
@@ -37,6 +41,9 @@ const navItems = [
   { label: 'Dashboard', path: '/' },
   { label: 'Transactions', path: '/transactions' },
   { label: 'Budgets', path: '/budgets' },
+  { label: 'Goals', path: '/goals' },
+  { label: 'Financial plan', path: '/financial-plan' },
+  { label: 'Credit Cards', path: '/credit-cards' },
   { label: 'Alerts', path: '/alerts' },
   { label: 'New transaction', path: '/transactions/new' },
 ]
@@ -84,9 +91,14 @@ function App() {
   const [financialSummary, setFinancialSummary] = useState(null)
   const [forecast, setForecast] = useState(null)
   const [advisory, setAdvisory] = useState(null)
+  const [recommendations, setRecommendations] = useState(null)
+  const [financialPlan, setFinancialPlan] = useState(null)
+  const [recommendationError, setRecommendationError] = useState('')
+  const [goals, setGoals] = useState([])
   const [transactions, setTransactions] = useState([])
   const [notifications, setNotifications] = useState([])
   const [unreadCount, setUnreadCount] = useState(0)
+  const [creditCardIntel, setCreditCardIntel] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
@@ -95,25 +107,34 @@ function App() {
     setError('')
 
     try {
-      const [dashboardResult, summaryResult, forecastResult, advisoryResult, transactionsResult, notificationsResult, unreadCountResult, rateResult] = await Promise.allSettled([
+      const [dashboardResult, summaryResult, forecastResult, advisoryResult, recommendationResult, financialPlanResult, goalsResult, transactionsResult, notificationsResult, unreadCountResult, rateResult, creditCardResult] = await Promise.allSettled([
         dashboardApi.summary(),
         summaryApi.get({}),
         forecastApi.get(),
         advisoryApi.get(),
+        recommendationApi.get(),
+        financialPlanApi.get(),
+        goalApi.list(),
         transactionApi.list({ page: 0, size: 8, sort: 'transactionDate,desc' }),
         notificationApi.list(),
         notificationApi.unreadCount(),
         exchangeRateApi.rates({ base: 'INR' }),
+        creditCardApi.intelligence(),
       ])
 
       const dashboard = dashboardResult.status === 'fulfilled' ? dashboardResult.value : null
       const financial = summaryResult.status === 'fulfilled' ? summaryResult.value : null
       const forecastData = forecastResult.status === 'fulfilled' ? forecastResult.value : null
       const advisoryData = advisoryResult.status === 'fulfilled' ? advisoryResult.value : null
+      const recommendationData = recommendationResult.status === 'fulfilled' ? recommendationResult.value : null
+      const financialPlanData = financialPlanResult.status === 'fulfilled' ? financialPlanResult.value : null
+      const goalData = goalsResult.status === 'fulfilled' ? goalsResult.value : []
+      setRecommendationError(recommendationResult.status === 'rejected' ? 'Recommendations are unavailable right now.' : '')
       const transactionData = transactionsResult.status === 'fulfilled' ? getListData(transactionsResult.value) : []
       const notificationData = notificationsResult.status === 'fulfilled' ? getListData(notificationsResult.value) : []
       const unread = unreadCountResult.status === 'fulfilled' ? Number(unreadCountResult.value ?? 0) : 0
       const currentRates = rateResult.status === 'fulfilled' ? rateResult.value?.rates || null : null
+      const creditCardData = creditCardResult.status === 'fulfilled' ? creditCardResult.value : null
 
       if (currentRates) {
         setStoredExchangeRates(currentRates)
@@ -123,9 +144,13 @@ function App() {
       setFinancialSummary(financial || dashboard?.financialSummary || null)
       setForecast(forecastData)
       setAdvisory(advisoryData)
+      setRecommendations(recommendationData)
+      setFinancialPlan(financialPlanData)
+      setGoals(goalData)
       setTransactions(transactionData)
       setNotifications(notificationData.slice(0, 5))
       setUnreadCount(unread)
+      setCreditCardIntel(creditCardData)
 
       if (!dashboard && !financial && !forecastData && !advisoryData && !transactionData.length && !notificationData.length) {
         setError('Unable to load dashboard. Try again.')
@@ -144,18 +169,22 @@ function App() {
   }, [])
 
   const stats = useMemo(() => {
-    const totalIncome = Number(financialSummary?.totalIncome ?? dashboardData?.financialSummary?.totalIncome ?? 0)
-    const totalExpenses = Number(financialSummary?.totalExpenses ?? dashboardData?.financialSummary?.totalExpenses ?? 0)
-    const disposable = Number(financialSummary?.disposableIncome ?? dashboardData?.financialSummary?.disposableIncome ?? totalIncome - totalExpenses)
-    const savings = Number(advisory?.recommendedSavings ?? 0)
+    const totalIncome = Number(recommendations?.monthlyIncome ?? financialSummary?.totalIncome ?? dashboardData?.financialSummary?.totalIncome ?? 0)
+    const totalExpenses = Number(recommendations?.totalExpenses ?? financialSummary?.totalExpenses ?? dashboardData?.financialSummary?.totalExpenses ?? 0)
+    const disposable = Number(recommendations?.monthlyLeft ?? financialSummary?.disposableIncome ?? dashboardData?.financialSummary?.disposableIncome ?? totalIncome - totalExpenses)
+    const savings = Number(recommendations?.monthlySavings ?? advisory?.recommendedSavings ?? 0)
+    const investments = Number(recommendations?.investments ?? 0)
+    const goals = Number(recommendations?.goalSavings ?? 0)
 
     return [
       { label: 'Total income', value: formatMoney(totalIncome, selectedCurrency), tone: 'positive' },
       { label: 'Total expenses', value: formatMoney(totalExpenses, selectedCurrency), tone: 'neutral' },
-      { label: 'Current balance', value: formatMoney(disposable, selectedCurrency), tone: disposable >= 0 ? 'positive' : 'warning' },
-      { label: 'Recommended savings', value: formatMoney(savings, selectedCurrency), tone: 'positive' },
+      { label: 'Monthly left', value: formatMoney(disposable, selectedCurrency), tone: disposable >= 0 ? 'positive' : 'warning' },
+      { label: 'Monthly savings', value: formatMoney(savings, selectedCurrency), tone: 'positive' },
+      { label: 'Investments', value: formatMoney(investments, selectedCurrency), tone: 'neutral' },
+      { label: 'Goal progress', value: goals ? formatMoney(goals, selectedCurrency) : 'No goals recorded', tone: 'neutral' },
     ]
-  }, [dashboardData, financialSummary, advisory, selectedCurrency])
+  }, [dashboardData, financialSummary, advisory, recommendations, selectedCurrency])
 
   const categoryBreakdown = useMemo(() => {
     const source = financialSummary?.expensesByCategory || dashboardData?.financialSummary?.expensesByCategory || []
@@ -165,6 +194,17 @@ function App() {
       fill: chartPalette[index % chartPalette.length],
     }))
   }, [dashboardData, financialSummary])
+
+  const goalSummary = useMemo(() => {
+    const activeGoals = goals.filter((goal) => goal.status !== 'COMPLETED')
+    return {
+      activeCount: activeGoals.length,
+      target: activeGoals.reduce((sum, goal) => sum + Number(goal.targetAmount ?? 0), 0),
+      saved: activeGoals.reduce((sum, goal) => sum + Number(goal.currentAmount ?? 0), 0),
+      remaining: activeGoals.reduce((sum, goal) => sum + Number(goal.remainingAmount ?? 0), 0),
+      monthly: activeGoals.reduce((sum, goal) => sum + Number(goal.requiredMonthlySaving ?? 0), 0),
+    }
+  }, [goals])
 
   const monthlyTrend = useMemo(() => {
     const source = financialSummary?.monthlyIncomeExpense || dashboardData?.financialSummary?.monthlyIncomeExpense || []
@@ -293,6 +333,113 @@ function App() {
                 </article>
               ))}
             </section>
+
+            <section className="panel goals-panel" aria-labelledby="goals-title">
+              <div className="panel-header">
+                <div>
+                  <p className="eyebrow">Planning</p>
+                  <h3 id="goals-title">Financial Goals</h3>
+                </div>
+                <button type="button" className="link-btn" onClick={() => navigate('/goals')}>Manage goals</button>
+              </div>
+              <div className="goal-summary-grid">
+                <div><span>Active goals</span><strong>{goalSummary.activeCount}</strong></div>
+                <div><span>Total target</span><strong>{formatMoney(goalSummary.target, selectedCurrency)}</strong></div>
+                <div><span>Total saved</span><strong>{formatMoney(goalSummary.saved, selectedCurrency)}</strong></div>
+                <div><span>Total remaining</span><strong>{formatMoney(goalSummary.remaining, selectedCurrency)}</strong></div>
+                <div><span>Monthly requirement</span><strong>{formatMoney(goalSummary.monthly, selectedCurrency)}</strong></div>
+              </div>
+              {goals.length ? (
+                <div className="dashboard-goal-list">
+                  {goals.filter((goal) => goal.status !== 'COMPLETED').slice(0, 4).map((goal) => (
+                    <div className="dashboard-goal-item" key={goal.id}>
+                      <div className="goal-item-head"><strong>{goal.name}</strong><span className={`tag ${goal.status === 'NEEDS_ATTENTION' || goal.status === 'OVERDUE' ? 'danger' : 'success'}`}>{goal.status.replaceAll('_', ' ')}</span></div>
+                      <div className="goal-item-meta"><span>{formatMoney(goal.currentAmount, selectedCurrency)} saved of {formatMoney(goal.targetAmount, selectedCurrency)}</span><span>{formatMoney(goal.requiredMonthlySaving, selectedCurrency)}/month</span></div>
+                      <div className="progress-track"><div className="progress-fill" style={{ width: `${Math.min(100, Number(goal.progressPercentage ?? 0))}%` }} /></div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="empty-card">No financial goals created yet.</div>
+              )}
+            </section>
+
+            <section className="panel recommendations-panel" aria-labelledby="recommendations-title">
+              <div className="panel-header">
+                <div>
+                  <p className="eyebrow">Rules engine</p>
+                  <h3 id="recommendations-title">AI Financial Recommendations</h3>
+                </div>
+                {recommendations && <span className="engine-badge">Explainable recommendations</span>}
+              </div>
+              {recommendationError ? (
+                <div className="inline-error" role="alert">{recommendationError}</div>
+              ) : recommendations?.recommendations?.length ? (
+                <div className="recommendation-list">
+                  {recommendations.recommendations.map((recommendation, index) => (
+                    <article key={`${recommendation.type}-${index}`} className={`recommendation-item priority-${recommendation.priority?.toLowerCase()}`}>
+                      <div className="recommendation-copy">
+                        <span className="recommendation-type">{recommendation.type?.replaceAll('_', ' ')}</span>
+                        <h4>{recommendation.title}</h4>
+                        <p>{recommendation.message}</p>
+                        <small>{recommendation.reason}</small>
+                      </div>
+                      {recommendation.relatedAmount != null && <strong>{formatMoney(recommendation.relatedAmount, selectedCurrency)}</strong>}
+                    </article>
+                  ))}
+                </div>
+              ) : recommendations ? (
+                <div className="empty-card">No recommendations are available from the current financial data.</div>
+              ) : (
+                <div className="empty-card">Recommendations are unavailable right now.</div>
+              )}
+            </section>
+
+            <section className="panel financial-plan-panel" aria-labelledby="financial-plan-title">
+              <div className="panel-header">
+                <div><p className="eyebrow">Savings & investment intelligence</p><h3 id="financial-plan-title">Financial Plan</h3></div>
+                <button type="button" className="link-btn" onClick={() => navigate('/financial-plan')}>Open plan</button>
+              </div>
+              {financialPlan ? (
+                <>
+                  <div className="plan-summary-grid">
+                    <div><span>Monthly income</span><strong>{formatMoney(financialPlan.monthlyIncome, selectedCurrency)}</strong></div>
+                    <div><span>Monthly expenses</span><strong>{formatMoney(financialPlan.monthlyExpenses, selectedCurrency)}</strong></div>
+                    <div><span>Monthly left</span><strong>{formatMoney(financialPlan.monthlyLeft, selectedCurrency)}</strong></div>
+                    <div><span>Goal savings</span><strong>{formatMoney(financialPlan.goalSavingsRequired, selectedCurrency)}</strong></div>
+                    <div><span>Emergency/buffer</span><strong>{formatMoney(financialPlan.recommendedEmergencyAllocation, selectedCurrency)}</strong></div>
+                    <div><span>Recommended investment</span><strong>{formatMoney(financialPlan.recommendedInvestmentAmount, selectedCurrency)}</strong></div>
+                    <div><span>Flexible spending</span><strong>{formatMoney(financialPlan.flexibleSpendingAmount, selectedCurrency)}</strong></div>
+                  </div>
+                  <p className="muted-copy">{financialPlan.riskPreference ? `${financialPlan.riskPreference} profile, ${financialPlan.timeHorizonYears}-year horizon.` : 'Investment profile not configured.'}</p>
+                  <div className="dashboard-plan-allocation">
+                    {financialPlan.allocation?.map((item) => <div key={item.category}><span>{item.category}</span><strong>{item.percentage}%</strong></div>)}
+                  </div>
+                </>
+              ) : <div className="empty-card">Financial plan is unavailable right now.</div>}
+            </section>
+
+            {creditCardIntel && creditCardIntel.cards?.length > 0 && <section className="panel cc-dashboard-panel" aria-labelledby="cc-health-title">
+              <div className="panel-header">
+                <div><p className="eyebrow">Credit card intelligence</p><h3 id="cc-health-title">Credit Card Health</h3></div>
+                <button type="button" className="link-btn" onClick={() => navigate('/credit-cards')}>Manage cards</button>
+              </div>
+              <div className="cc-dashboard-summary">
+                <div><span>Total Limit</span><strong>{formatMoney(creditCardIntel.summary?.totalCreditLimit, selectedCurrency)}</strong></div>
+                <div><span>Total Outstanding</span><strong>{formatMoney(creditCardIntel.summary?.totalOutstanding, selectedCurrency)}</strong></div>
+                <div><span>Available Credit</span><strong>{formatMoney(creditCardIntel.summary?.totalAvailableCredit, selectedCurrency)}</strong></div>
+                <div><span>Overall Utilization</span><strong style={{ color: Number(creditCardIntel.summary?.overallUtilization) > 75 ? '#dc2626' : Number(creditCardIntel.summary?.overallUtilization) > 50 ? '#b45309' : '#15803d' }}>{Number(creditCardIntel.summary?.overallUtilization ?? 0).toFixed(1)}%</strong></div>
+                <div><span>Repayment Capacity</span><strong className={creditCardIntel.repaymentCapacity?.status === 'COMFORTABLE' ? '' : 'overrun'}>{creditCardIntel.repaymentCapacity?.status?.replace('_', ' ') || '—'}</strong></div>
+                <div><span>Cards Needing Attention</span><strong style={{ color: (creditCardIntel.summary?.cardsNeedingAttention ?? 0) > 0 ? '#dc2626' : '#15803d' }}>{creditCardIntel.summary?.cardsNeedingAttention ?? 0}</strong></div>
+              </div>
+              <div className="cc-dashboard-cards">
+                {creditCardIntel.cards.slice(0, 4).map((card) => <div key={card.id} className="cc-dashboard-card-item">
+                  <div className="cc-dashboard-card-head"><strong>{card.cardName}</strong><span className={`tag ${card.healthStatus === 'HEALTHY' ? 'success' : card.healthStatus === 'WATCH' ? 'warning-tag' : 'danger'}`}>{card.healthStatus}</span></div>
+                  <div className="cc-dashboard-card-meta"><span>•••• {card.lastFourDigits}</span><span>{formatMoney(card.currentOutstanding, selectedCurrency)} / {formatMoney(card.creditLimit, selectedCurrency)}</span><span style={{ color: Number(card.utilizationPercentage) > 75 ? '#dc2626' : Number(card.utilizationPercentage) > 50 ? '#b45309' : '#15803d' }}>{Number(card.utilizationPercentage).toFixed(1)}%</span><span>Due: {card.dueDate || '—'}</span></div>
+                  <div className="progress-track"><div className="progress-fill" style={{ width: `${Math.min(100, Number(card.utilizationPercentage))}%`, background: Number(card.utilizationPercentage) > 75 ? 'linear-gradient(90deg, #f59e0b, #ef4444)' : undefined }} /></div>
+                </div>)}
+              </div>
+            </section>}
 
             <section className="dashboard-grid">
               <article className="panel chart-panel">
