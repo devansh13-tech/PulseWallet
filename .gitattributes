@@ -1,2 +1,32 @@
-/mvnw text eol=lf
-*.cmd text eol=crlf
+# Normalise line endings for everyone on the team.
+#
+# Without this, a Windows checkout rewrites every file to CRLF and `git status`
+# reports files as modified when nothing actually changed. That already happened
+# once on HealthController.java. `text=auto eol=lf` stores LF in the repository
+# and lets each machine check out whatever it prefers.
+#
+# After adding this, run once to re-normalise existing files:
+#   git add --renormalize .
+#   git commit -m "chore: normalise line endings"
+
+* text=auto eol=lf
+
+# Scripts that must keep platform-specific endings to stay executable.
+/mvnw    text eol=lf
+*.sh     text eol=lf
+*.cmd    text eol=crlf
+*.bat    text eol=crlf
+
+# Binary files - never touch these.
+*.png    binary
+*.jpg    binary
+*.jpeg   binary
+*.gif    binary
+*.ico    binary
+*.pdf    binary
+*.jar    binary
+*.zip    binary
+*.pkl    binary
+*.joblib binary
+*.onnx   binary
+*.h5     binary

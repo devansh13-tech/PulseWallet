@@ -1,0 +1,12 @@
+warning: in the working copy of 'PROJECT_PROGRESS.md', CRLF will be replaced by LF the next time Git touches it
+warning: in the working copy of 'src/main/java/com/pulsewallet/pulsewallet/repository/FraudAlertRepository.java', CRLF will be replaced by LF the next time Git touches it
+ .env.example                                       |   7 [32m+[m
+ PROJECT_PROGRESS.md                                |  50 [32m++[m[31m---[m
+ pom.xml                                            |   9 [32m+[m
+ .../pulsewallet/config/SecurityConfig.java         |   2 [32m+[m
+ .../pulsewallet/pulsewallet/entity/FraudAlert.java | 228 [32m++++++++++[m[31m-----------[m
+ .../repository/FraudAlertRepository.java           |  11 [32m+[m[31m-[m
+ .../pulsewallet/service/TransactionService.java    |  40 [32m+++[m[31m-[m
+ src/main/resources/application.properties          |   8 [32m+[m
+ .../service/TransactionServiceTest.java            |  14 [32m+[m[31m-[m
+ 9 files changed, 219 insertions(+), 150 deletions(-)

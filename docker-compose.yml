@@ -1,0 +1,71 @@
+# ==============================================================================
+# PulseWallet - local development infrastructure
+#
+#   docker compose up -d                  # PostgreSQL only (what you need daily)
+#   docker compose --profile tools up -d   # + pgAdmin on http://localhost:5050
+#   docker compose down                    # stop, keep data
+#   docker compose down -v                 # stop AND wipe the database volume
+#
+# Values come from the .env file in this directory (copy it from .env.example).
+# Every variable has a working default, so `docker compose up -d` succeeds even
+# with no .env present.
+# ==============================================================================
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    container_name: pulsewallet-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-pulsewallet_db}
+      POSTGRES_USER: ${DB_USERNAME:-pulsewallet}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-pulsewallet}
+      # Speeds up local restarts; never use this in production.
+      POSTGRES_INITDB_ARGS: "--data-checksums"
+    ports:
+      # Host port is configurable: if you already run Postgres on 5432,
+      # set DB_PORT=5433 in .env instead of fighting the conflict.
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - pulsewallet-pgdata:/var/lib/postgresql/data
+    networks:
+      - pulsewallet-net
+    healthcheck:
+      # Spring Boot starts much faster than Postgres accepts connections.
+      # This lets `docker compose up --wait` block until the DB is truly ready.
+      test: [ "CMD-SHELL", "pg_isready -U ${DB_USERNAME:-pulsewallet} -d ${DB_NAME:-pulsewallet_db}" ]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+  # Optional GUI for inspecting tables during development.
+  # Gated behind a compose profile so it never slows down the default startup.
+  pgadmin:
+    image: dpage/pgadmin4:8
+    container_name: pulsewallet-pgadmin
+    restart: unless-stopped
+    profiles: [ "tools" ]
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@pulsewallet.local}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: "False"
+    ports:
+      - "${PGADMIN_PORT:-5050}:80"
+    networks:
+      - pulsewallet-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+# Named explicitly because the Milestone 4 fraud-detection service (FastAPI)
+# will join this same network to reach Postgres by hostname.
+networks:
+  pulsewallet-net:
+    name: pulsewallet-net
+    driver: bridge
+
+volumes:
+  pulsewallet-pgdata:
+    name: pulsewallet-pgdata

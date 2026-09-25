@@ -1,8 +1,63 @@
+### Secrets / environment ###
+# Real credentials never get committed. The template does.
+.env
+.env.*
+!.env.example
+application-local.properties
+application-local.yml
+*.pem
+*.p12
+*.jks
+
+### Maven / build output ###
 HELP.md
 target/
 .mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
+
+### Logs ###
+*.log
+logs/
+
+### Machine learning artifacts (Milestone 3 & 4) ###
+# Trained models and datasets are large binaries - keep them out of git.
+# The Kaggle credit-card fraud CSV alone is ~144 MB and will be rejected
+# by GitHub's 100 MB file limit. Document the download step in the README
+# instead of committing the file.
+*.pkl
+*.joblib
+*.h5
+*.keras
+*.onnx
+*.pt
+*.pth
+models/
+data/raw/
+data/processed/
+*.csv
+!**/src/test/resources/**/*.csv
+
+### Python (fraud-detection microservice, Milestone 4) ###
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+.ipynb_checkpoints/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+### Node / React frontend (Milestone 6) ###
+node_modules/
+dist/
+.next/
+coverage/
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.eslintcache
 
 ### STS ###
 .apt_generated
@@ -31,3 +86,8 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### OS cruft ###
+.DS_Store
+Thumbs.db
+desktop.ini
