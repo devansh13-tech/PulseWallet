@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { budgetApi, transactionApi } from '../lib/api';
 import { formatMoneyAmount, useSelectedCurrency } from '../utils/currency';
+import { PageNavHeader, PageNavFooter } from '../components/PageNavigation.jsx';
 
 function formatMoney(value, currencyCode) {
     return formatMoneyAmount(value, currencyCode);
@@ -71,6 +72,7 @@ export default function BudgetsPage() {
 
     return (
         <div className="page-shell">
+            <PageNavHeader title="Budgets" />
             <div className="page-header">
                 <div>
                     <p className="eyebrow">PulseWallet</p>
@@ -113,6 +115,7 @@ export default function BudgetsPage() {
                     </div>
                 )}
             </div>
+            <PageNavFooter />
         </div>
     );
 }

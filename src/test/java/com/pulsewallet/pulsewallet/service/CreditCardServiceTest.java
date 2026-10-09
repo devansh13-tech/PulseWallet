@@ -15,6 +15,7 @@ import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -72,6 +73,35 @@ class CreditCardServiceTest {
         assertEquals("HDFC", response.issuer());
         assertEquals("Regalia", response.cardName());
         assertEquals("1234", response.lastFourDigits());
+        assertEquals(new BigDecimal("75000.00"), response.availableCredit());
+        assertEquals(new BigDecimal("25.00"), response.creditUtilization());
+    }
+
+    @Test
+    void createWithCardNetworkAndAnnualFeePersistsCorrectly() {
+        when(userRepository.getReferenceById(1L)).thenReturn(user);
+        CreditCardRequest request = new CreditCardRequest("SBI", "SimplyCLICK", "VISA", "4321",
+                new BigDecimal("50000"), new BigDecimal("10000"),
+                LocalDate.of(2026, 10, 5), LocalDate.of(2026, 10, 25),
+                new BigDecimal("499.00"), "10x rewards on partners", "Fuel surcharge waiver");
+
+        CreditCard saved = new CreditCard(user, "SBI", "SimplyCLICK", "VISA", "4321",
+                new BigDecimal("50000"), new BigDecimal("10000"),
+                LocalDate.of(2026, 10, 5), LocalDate.of(2026, 10, 25),
+                new BigDecimal("499.00"), "10x rewards on partners", "Fuel surcharge waiver");
+        TestEntities.withId(saved, 20L);
+        when(creditCardRepository.save(any(CreditCard.class))).thenReturn(saved);
+
+        CreditCardResponse response = service.create(1L, request);
+
+        assertNotNull(response);
+        assertEquals("SBI", response.issuer());
+        assertEquals("SimplyCLICK", response.cardName());
+        assertEquals("VISA", response.cardNetwork());
+        assertEquals("4321", response.lastFourDigits());
+        assertEquals(new BigDecimal("499.00"), response.annualFee());
+        assertEquals(new BigDecimal("40000.00"), response.availableCredit());
+        assertEquals(new BigDecimal("20.00"), response.creditUtilization());
     }
 
     @Test
@@ -82,6 +112,8 @@ class CreditCardServiceTest {
 
         assertEquals(1, result.size());
         assertEquals("Regalia", result.get(0).cardName());
+        assertEquals(new BigDecimal("75000.00"), result.get(0).availableCredit());
+        assertEquals(new BigDecimal("25.00"), result.get(0).creditUtilization());
     }
 
     @Test
@@ -91,6 +123,8 @@ class CreditCardServiceTest {
         CreditCardResponse result = service.getById(10L, 1L);
 
         assertEquals(10L, result.id());
+        assertEquals(new BigDecimal("75000.00"), result.availableCredit());
+        assertEquals(new BigDecimal("25.00"), result.creditUtilization());
     }
 
     @Test
@@ -115,6 +149,29 @@ class CreditCardServiceTest {
         assertEquals("ICICI", result.issuer());
         assertEquals("Amazon Pay", result.cardName());
         assertEquals("5678", result.lastFourDigits());
+        assertEquals(new BigDecimal("190000.00"), result.availableCredit());
+        assertEquals(new BigDecimal("5.00"), result.creditUtilization());
+    }
+
+    @Test
+    void updateWithNetworkAndAnnualFeeModifiesAllFields() {
+        CreditCard existing = cardEntity();
+        when(creditCardRepository.findByIdAndUserId(10L, 1L)).thenReturn(Optional.of(existing));
+
+        CreditCardRequest update = new CreditCardRequest("Axis", "Magnus", "MASTERCARD", "9999",
+                new BigDecimal("500000"), new BigDecimal("150000"),
+                LocalDate.of(2026, 11, 2), LocalDate.of(2026, 11, 22),
+                new BigDecimal("12500.00"), "EDGE Rewards", "Unlimited airport lounges");
+
+        CreditCardResponse result = service.update(10L, 1L, update);
+
+        assertEquals("Axis", result.issuer());
+        assertEquals("Magnus", result.cardName());
+        assertEquals("MASTERCARD", result.cardNetwork());
+        assertEquals("9999", result.lastFourDigits());
+        assertEquals(new BigDecimal("12500.00"), result.annualFee());
+        assertEquals(new BigDecimal("350000.00"), result.availableCredit());
+        assertEquals(new BigDecimal("30.00"), result.creditUtilization());
     }
 
     @Test
@@ -135,9 +192,50 @@ class CreditCardServiceTest {
     }
 
     @Test
+    void validationRejectsNullRequest() {
+        assertThrows(IllegalArgumentException.class, () -> service.create(1L, null));
+    }
+
+    @Test
+    void validationRejectsBlankIssuer() {
+        CreditCardRequest bad = new CreditCardRequest("   ", "Card", "1234",
+                new BigDecimal("100000"), BigDecimal.ZERO,
+                LocalDate.now(), LocalDate.now().plusDays(15), null, null);
+
+        assertThrows(IllegalArgumentException.class, () -> service.create(1L, bad));
+    }
+
+    @Test
+    void validationRejectsBlankCardName() {
+        CreditCardRequest bad = new CreditCardRequest("HDFC", " ", "1234",
+                new BigDecimal("100000"), BigDecimal.ZERO,
+                LocalDate.now(), LocalDate.now().plusDays(15), null, null);
+
+        assertThrows(IllegalArgumentException.class, () -> service.create(1L, bad));
+    }
+
+    @Test
     void validationRejectsInvalidDigits() {
         CreditCardRequest bad = new CreditCardRequest("HDFC", "Card", "12X4",
                 new BigDecimal("100000"), BigDecimal.ZERO,
+                LocalDate.now(), LocalDate.now().plusDays(15), null, null);
+
+        assertThrows(IllegalArgumentException.class, () -> service.create(1L, bad));
+    }
+
+    @Test
+    void validationRejectsNullOrNegativeCreditLimit() {
+        CreditCardRequest bad = new CreditCardRequest("HDFC", "Card", "1234",
+                new BigDecimal("-500"), BigDecimal.ZERO,
+                LocalDate.now(), LocalDate.now().plusDays(15), null, null);
+
+        assertThrows(IllegalArgumentException.class, () -> service.create(1L, bad));
+    }
+
+    @Test
+    void validationRejectsNegativeOutstanding() {
+        CreditCardRequest bad = new CreditCardRequest("HDFC", "Card", "1234",
+                new BigDecimal("100000"), new BigDecimal("-100"),
                 LocalDate.now(), LocalDate.now().plusDays(15), null, null);
 
         assertThrows(IllegalArgumentException.class, () -> service.create(1L, bad));
@@ -150,5 +248,43 @@ class CreditCardServiceTest {
                 LocalDate.now(), LocalDate.now().plusDays(15), null, null);
 
         assertThrows(IllegalArgumentException.class, () -> service.create(1L, bad));
+    }
+
+    @Test
+    void validationRejectsNullDates() {
+        CreditCardRequest bad = new CreditCardRequest("HDFC", "Card", "1234",
+                new BigDecimal("100000"), BigDecimal.ZERO,
+                null, LocalDate.now().plusDays(15), null, null);
+
+        assertThrows(IllegalArgumentException.class, () -> service.create(1L, bad));
+    }
+
+    @Test
+    void validationRejectsNegativeAnnualFee() {
+        CreditCardRequest bad = new CreditCardRequest("HDFC", "Card", "VISA", "1234",
+                new BigDecimal("100000"), BigDecimal.ZERO,
+                LocalDate.now(), LocalDate.now().plusDays(15),
+                new BigDecimal("-50"), null, null);
+
+        assertThrows(IllegalArgumentException.class, () -> service.create(1L, bad));
+    }
+
+    @Test
+    void calculateAvailableCreditAndUtilizationWorkDirectly() {
+        BigDecimal limit = new BigDecimal("100000");
+        BigDecimal outstanding = new BigDecimal("25000");
+
+        BigDecimal available = service.calculateAvailableCredit(limit, outstanding);
+        BigDecimal utilization = service.calculateCreditUtilization(limit, outstanding);
+
+        assertEquals(new BigDecimal("75000.00"), available);
+        assertEquals(new BigDecimal("25.00"), utilization);
+
+        // Zero limit edge case
+        assertEquals(new BigDecimal("0.00"), service.calculateCreditUtilization(BigDecimal.ZERO, outstanding));
+
+        // Zero outstanding edge case
+        assertEquals(new BigDecimal("100000.00"), service.calculateAvailableCredit(limit, BigDecimal.ZERO));
+        assertEquals(new BigDecimal("0.00"), service.calculateCreditUtilization(limit, BigDecimal.ZERO));
     }
 }

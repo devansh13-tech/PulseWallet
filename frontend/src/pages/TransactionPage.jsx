@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { transactionApi, categoryApi } from '../lib/api';
+import { transactionApi, categoryApi, linkedPaymentAccountApi } from '../lib/api';
+import { PageNavHeader, PageNavFooter } from '../components/PageNavigation.jsx';
 import './transaction.css';
 
 const EMPTY_FORM = {
@@ -25,6 +26,7 @@ export default function TransactionPage() {
   // Categories from backend
   const [categories, setCategories] = useState([]);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
+  const [linkedAccounts, setLinkedAccounts] = useState([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -40,6 +42,16 @@ export default function TransactionPage() {
       .finally(() => {
         if (!cancelled) setCategoriesLoading(false);
       });
+
+    linkedPaymentAccountApi
+      .list()
+      .then((data) => {
+        if (!cancelled) setLinkedAccounts(data || []);
+      })
+      .catch(() => {
+        if (!cancelled) setLinkedAccounts([]);
+      });
+
     return () => { cancelled = true; };
   }, []);
 
@@ -140,16 +152,26 @@ export default function TransactionPage() {
 
   return (
     <div className="txn-page">
-      <button type="button" className="txn-back" onClick={() => navigate('/')}>
-        ← Back to dashboard
-      </button>
+      <PageNavHeader title="New Transaction" />
 
       <h2>New transaction</h2>
       <p className="subtitle">Record an income or expense</p>
 
       <div className="txn-card">
         {apiError && <div className="txn-error" role="alert">{apiError}</div>}
-        {success && <div className="txn-success" role="status">{success}</div>}
+        {success && (
+          <div className="txn-success" role="status" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+            <span>{success}</span>
+            <button
+              type="button"
+              className="primary-btn small"
+              onClick={() => navigate('/transactions')}
+              style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}
+            >
+              View in Transactions →
+            </button>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} noValidate>
           {/* Amount + Type row */}
@@ -263,6 +285,47 @@ export default function TransactionPage() {
           {/* Payment Channel */}
           <div className="txn-form-group">
             <label htmlFor="txn-channel">Payment channel (optional)</label>
+            {linkedAccounts.length > 0 && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginBottom: '0.5rem' }}>
+                {linkedAccounts.map((acc) => (
+                  <button
+                    key={acc.id}
+                    type="button"
+                    onClick={() => setForm((prev) => ({ ...prev, paymentChannel: `${acc.providerName} (${acc.maskedIdentifier})` }))}
+                    style={{
+                      background: form.paymentChannel === `${acc.providerName} (${acc.maskedIdentifier})` ? '#0284c7' : '#f1f5f9',
+                      color: form.paymentChannel === `${acc.providerName} (${acc.maskedIdentifier})` ? '#ffffff' : '#334155',
+                      border: '1px solid #cbd5e1',
+                      borderRadius: '16px',
+                      padding: '0.25rem 0.6rem',
+                      fontSize: '0.75rem',
+                      cursor: 'pointer',
+                      fontWeight: 500,
+                    }}
+                  >
+                    🏛️ {acc.providerName} ({acc.maskedIdentifier})
+                  </button>
+                ))}
+                {['UPI', 'Credit Card', 'Cash'].map((std) => (
+                  <button
+                    key={std}
+                    type="button"
+                    onClick={() => setForm((prev) => ({ ...prev, paymentChannel: std }))}
+                    style={{
+                      background: form.paymentChannel === std ? '#0284c7' : '#f8fafc',
+                      color: form.paymentChannel === std ? '#ffffff' : '#64748b',
+                      border: '1px dashed #cbd5e1',
+                      borderRadius: '16px',
+                      padding: '0.25rem 0.6rem',
+                      fontSize: '0.75rem',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {std}
+                  </button>
+                ))}
+              </div>
+            )}
             <input
               id="txn-channel"
               type="text"
@@ -270,18 +333,36 @@ export default function TransactionPage() {
               value={form.paymentChannel}
               onChange={onChange('paymentChannel')}
               className={errors.paymentChannel ? 'field-error' : ''}
-              placeholder="e.g. credit card, bank transfer"
+              placeholder="e.g. HDFC Bank, credit card, UPI"
             />
             {errors.paymentChannel && (
               <p className="error-text">{errors.paymentChannel}</p>
             )}
           </div>
 
-          <button type="submit" className="txn-submit" disabled={loading}>
-            {loading ? 'Creating…' : 'Create transaction'}
-          </button>
+          <div className="txn-action-buttons" style={{ display: 'flex', gap: '0.75rem', marginTop: '1.25rem' }}>
+            <button
+              type="button"
+              className="secondary-btn"
+              onClick={() => navigate('/transactions')}
+              id="btn-back-transactions"
+              style={{ flex: 1, padding: '0.85rem' }}
+            >
+              ← Back to Transactions
+            </button>
+            <button
+              type="submit"
+              className="txn-submit"
+              disabled={loading}
+              style={{ flex: 2, margin: 0 }}
+            >
+              {loading ? 'Creating…' : 'Create transaction ✓'}
+            </button>
+          </div>
         </form>
       </div>
+
+      <PageNavFooter />
     </div>
   );
 }

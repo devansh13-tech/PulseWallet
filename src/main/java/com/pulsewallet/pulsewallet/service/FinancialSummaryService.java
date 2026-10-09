@@ -38,18 +38,25 @@ public class FinancialSummaryService {
 
         BigDecimal income = total(userId, TransactionType.INCOME, effectiveFrom, effectiveTo);
         BigDecimal expenses = total(userId, TransactionType.EXPENSE, effectiveFrom, effectiveTo);
+        BigDecimal disposable = income.subtract(expenses);
+        BigDecimal savingsRate = calculateSavingsRate(income, disposable);
         return new FinancialSummaryResponse(
                 from,
                 to,
                 income,
                 expenses,
-                income.subtract(expenses),
+                disposable,
+                savingsRate,
                 periodAmounts(userId, TransactionType.INCOME, effectiveFrom, effectiveTo),
                 periodAmounts(userId, TransactionType.EXPENSE, effectiveFrom, effectiveTo),
                 categoryAmounts(userId, effectiveFrom, effectiveTo),
                 monthlyAmounts(userId, effectiveFrom, effectiveTo),
                 categoryMonthlyAmounts(userId, effectiveFrom, effectiveTo),
                 monthlyTypeAmounts(userId, effectiveFrom, effectiveTo));
+    }
+
+    public BigDecimal calculateSavingsRate(BigDecimal totalIncome, BigDecimal disposableIncome) {
+        return FinancialSummaryResponse.calculateSavingsRate(totalIncome, disposableIncome);
     }
 
     private BigDecimal total(Long userId, TransactionType type, LocalDate from, LocalDate to) {

@@ -3,6 +3,7 @@
 .env
 .env.*
 !.env.example
+!.env*.example
 application-local.properties
 application-local.yml
 *.pem
@@ -33,6 +34,8 @@ logs/
 *.pt
 *.pth
 models/
+!fraud-detection/models/
+!fraud-detection/models/*.joblib
 data/raw/
 data/processed/
 *.csv

@@ -38,6 +38,7 @@ public class TransactionService {
     private final CategoryRepository categoryRepository;
     private final UserRepository userRepository;
     private final ExpenseCategorizationService expenseCategorizationService;
+    private final IncomeCategorizationService incomeCategorizationService;
     private final FraudDetectionService fraudDetectionService;
     private final FraudAlertRepository fraudAlertRepository;
     private final NotificationRepository notificationRepository;
@@ -47,6 +48,7 @@ public class TransactionService {
             CategoryRepository categoryRepository,
             UserRepository userRepository,
             ExpenseCategorizationService expenseCategorizationService,
+            IncomeCategorizationService incomeCategorizationService,
             FraudDetectionService fraudDetectionService,
             FraudAlertRepository fraudAlertRepository,
             NotificationRepository notificationRepository) {
@@ -54,6 +56,7 @@ public class TransactionService {
         this.categoryRepository = categoryRepository;
         this.userRepository = userRepository;
         this.expenseCategorizationService = expenseCategorizationService;
+        this.incomeCategorizationService = incomeCategorizationService;
         this.fraudDetectionService = fraudDetectionService;
         this.fraudAlertRepository = fraudAlertRepository;
         this.notificationRepository = notificationRepository;
@@ -90,6 +93,8 @@ public class TransactionService {
         Category category = resolveCategory(request.categoryId(), userId);
         if (category == null && request.type() == TransactionType.EXPENSE) {
             category = expenseCategorizationService.categorize(request.description(), userId);
+        } else if (category == null && request.type() == TransactionType.INCOME) {
+            category = incomeCategorizationService.categorize(request.description(), userId);
         }
         Transaction transaction = new Transaction(
                 user,
@@ -111,6 +116,8 @@ public class TransactionService {
         Category category = resolveCategory(request.categoryId(), userId);
         if (category == null && request.type() == TransactionType.EXPENSE) {
             category = expenseCategorizationService.categorize(request.description(), userId);
+        } else if (category == null && request.type() == TransactionType.INCOME) {
+            category = incomeCategorizationService.categorize(request.description(), userId);
         }
         transaction.setAmount(request.amount());
         transaction.setDescription(request.description());

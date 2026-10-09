@@ -53,6 +53,9 @@ class TransactionServiceTest {
         private ExpenseCategorizationService expenseCategorizationService;
 
         @Mock
+        private IncomeCategorizationService incomeCategorizationService;
+
+        @Mock
         private FraudDetectionService fraudDetectionService;
 
         @Mock
@@ -71,6 +74,7 @@ class TransactionServiceTest {
                                 categoryRepository,
                                 userRepository,
                                 expenseCategorizationService,
+                                incomeCategorizationService,
                                 fraudDetectionService,
                                 fraudAlertRepository,
                                 notificationRepository);
@@ -187,8 +191,11 @@ class TransactionServiceTest {
         }
 
         @Test
-        void create_doesNotAutoCategorizeIncomeTransactions() {
+        void create_autoCategorizesIncomeWhenNoCategoryIsProvided() {
+                Category salary = TestEntities.withId(
+                                new Category("Salary", TransactionType.INCOME, null), 1L);
                 when(userRepository.getReferenceById(OWNER_ID)).thenReturn(owner);
+                when(incomeCategorizationService.categorize("Monthly salary", OWNER_ID)).thenReturn(salary);
                 when(transactionRepository.save(any(Transaction.class))).thenAnswer(invocation -> {
                         Transaction saved = invocation.getArgument(0);
                         return TestEntities.withId(saved, 13L);
@@ -199,9 +206,97 @@ class TransactionServiceTest {
 
                 TransactionResponse response = transactionService.create(OWNER_ID, request);
 
-                assertThat(response.categoryId()).isNull();
-                verify(expenseCategorizationService, never()).categorize(any(), eq(OWNER_ID));
+                assertThat(response.categoryId()).isEqualTo(1L);
+                assertThat(response.categoryName()).isEqualTo("Salary");
+                verify(incomeCategorizationService).categorize("Monthly salary", OWNER_ID);
+                verify(expenseCategorizationService, never()).categorize(any(), any());
                 verify(fraudDetectionService, never()).checkFraud(any());
+        }
+
+        @Test
+        void create_preservesExplicitCategoryForIncomeTransaction() {
+                Category freelance = TestEntities.withId(
+                                new Category("Freelance", TransactionType.INCOME, null), 2L);
+                when(userRepository.getReferenceById(OWNER_ID)).thenReturn(owner);
+                when(categoryRepository.findById(2L)).thenReturn(Optional.of(freelance));
+                when(transactionRepository.save(any(Transaction.class))).thenAnswer(invocation -> {
+                        Transaction saved = invocation.getArgument(0);
+                        return TestEntities.withId(saved, 30L);
+                });
+                TransactionRequest request = new TransactionRequest(
+                                new BigDecimal("25000.00"), "Salary credited", 2L,
+                                TransactionType.INCOME, LocalDate.of(2026, 8, 1));
+
+                TransactionResponse response = transactionService.create(OWNER_ID, request);
+
+                assertThat(response.categoryId()).isEqualTo(2L);
+                assertThat(response.categoryName()).isEqualTo("Freelance");
+                verify(incomeCategorizationService, never()).categorize(any(), any());
+                verify(expenseCategorizationService, never()).categorize(any(), any());
+        }
+
+        @Test
+        void create_preservesExplicitSalaryForIncomeTransaction() {
+                Category salary = TestEntities.withId(
+                                new Category("Salary", TransactionType.INCOME, null), 1L);
+                when(userRepository.getReferenceById(OWNER_ID)).thenReturn(owner);
+                when(categoryRepository.findById(1L)).thenReturn(Optional.of(salary));
+                when(transactionRepository.save(any(Transaction.class))).thenAnswer(invocation -> {
+                        Transaction saved = invocation.getArgument(0);
+                        return TestEntities.withId(saved, 31L);
+                });
+                TransactionRequest request = new TransactionRequest(
+                                new BigDecimal("1000.00"), "Dividend received", 1L,
+                                TransactionType.INCOME, LocalDate.of(2026, 8, 1));
+
+                TransactionResponse response = transactionService.create(OWNER_ID, request);
+
+                assertThat(response.categoryId()).isEqualTo(1L);
+                assertThat(response.categoryName()).isEqualTo("Salary");
+                verify(incomeCategorizationService, never()).categorize(any(), any());
+        }
+
+        @Test
+        void create_handlesNullDescriptionForIncomeSafely() {
+                Category otherIncome = TestEntities.withId(
+                                new Category("Other Income", TransactionType.INCOME, null), 4L);
+                when(userRepository.getReferenceById(OWNER_ID)).thenReturn(owner);
+                when(incomeCategorizationService.categorize(null, OWNER_ID)).thenReturn(otherIncome);
+                when(transactionRepository.save(any(Transaction.class))).thenAnswer(invocation -> {
+                        Transaction saved = invocation.getArgument(0);
+                        return TestEntities.withId(saved, 32L);
+                });
+                TransactionRequest request = new TransactionRequest(
+                                new BigDecimal("500.00"), null, null,
+                                TransactionType.INCOME, LocalDate.of(2026, 8, 1));
+
+                TransactionResponse response = transactionService.create(OWNER_ID, request);
+
+                assertThat(response.description()).isNull();
+                assertThat(response.categoryId()).isEqualTo(4L);
+                assertThat(response.categoryName()).isEqualTo("Other Income");
+                verify(incomeCategorizationService).categorize(null, OWNER_ID);
+        }
+
+        @Test
+        void create_expenseTransactionDoesNotTriggerIncomeCategorization() {
+                Category shopping = TestEntities.withId(
+                                new Category("Shopping", TransactionType.EXPENSE, null), 8L);
+                when(userRepository.getReferenceById(OWNER_ID)).thenReturn(owner);
+                when(expenseCategorizationService.categorize("Salary shoes", OWNER_ID)).thenReturn(shopping);
+                when(transactionRepository.save(any(Transaction.class))).thenAnswer(invocation -> {
+                        Transaction saved = invocation.getArgument(0);
+                        return TestEntities.withId(saved, 33L);
+                });
+                TransactionRequest request = new TransactionRequest(
+                                new BigDecimal("2999.00"), "Salary shoes", null,
+                                TransactionType.EXPENSE, LocalDate.of(2026, 8, 1));
+
+                TransactionResponse response = transactionService.create(OWNER_ID, request);
+
+                assertThat(response.categoryId()).isEqualTo(8L);
+                verify(expenseCategorizationService).categorize("Salary shoes", OWNER_ID);
+                verify(incomeCategorizationService, never()).categorize(any(), any());
         }
 
         @Test
@@ -312,19 +407,170 @@ class TransactionServiceTest {
         }
 
         @Test
-        void update_doesNotAutoCategorizeIncomeTransactions() {
+        void update_autoCategorizesIncomeWhenNoCategoryIsProvided() {
                 Transaction existing = TestEntities.withId(
                                 new Transaction(owner, new BigDecimal("100.00"), "Old desc", null,
                                                 TransactionType.INCOME, LocalDate.of(2026, 8, 1)),
                                 22L);
+                Category salary = TestEntities.withId(
+                                new Category("Salary", TransactionType.INCOME, null), 1L);
                 when(transactionRepository.findByIdAndUserId(22L, OWNER_ID)).thenReturn(Optional.of(existing));
+                when(incomeCategorizationService.categorize("Updated salary", OWNER_ID)).thenReturn(salary);
                 TransactionRequest request = new TransactionRequest(
                                 new BigDecimal("60000.00"), "Updated salary", null,
                                 TransactionType.INCOME, LocalDate.of(2026, 8, 1));
 
                 TransactionResponse response = transactionService.update(22L, OWNER_ID, request);
 
-                assertThat(response.categoryId()).isNull();
+                assertThat(response.categoryId()).isEqualTo(1L);
+                assertThat(response.categoryName()).isEqualTo("Salary");
+                verify(incomeCategorizationService).categorize("Updated salary", OWNER_ID);
+                verify(expenseCategorizationService, never()).categorize(any(), any());
+        }
+
+        @Test
+        void update_preservesExplicitCategoryForIncomeTransaction() {
+                Transaction existing = TestEntities.withId(
+                                new Transaction(owner, new BigDecimal("100.00"), "Old desc", null,
+                                                TransactionType.INCOME, LocalDate.of(2026, 8, 1)),
+                                28L);
+                Category freelance = TestEntities.withId(
+                                new Category("Freelance", TransactionType.INCOME, null), 2L);
+                when(transactionRepository.findByIdAndUserId(28L, OWNER_ID)).thenReturn(Optional.of(existing));
+                when(categoryRepository.findById(2L)).thenReturn(Optional.of(freelance));
+                TransactionRequest request = new TransactionRequest(
+                                new BigDecimal("30000.00"), "Salary credited", 2L,
+                                TransactionType.INCOME, LocalDate.of(2026, 8, 1));
+
+                TransactionResponse response = transactionService.update(28L, OWNER_ID, request);
+
+                assertThat(response.categoryId()).isEqualTo(2L);
+                assertThat(response.categoryName()).isEqualTo("Freelance");
+                verify(incomeCategorizationService, never()).categorize(any(), any());
+        }
+
+        @Test
+        void update_handlesNullDescriptionForIncomeSafely() {
+                Transaction existing = TestEntities.withId(
+                                new Transaction(owner, new BigDecimal("100.00"), "Old desc", null,
+                                                TransactionType.INCOME, LocalDate.of(2026, 8, 1)),
+                                29L);
+                Category otherIncome = TestEntities.withId(
+                                new Category("Other Income", TransactionType.INCOME, null), 4L);
+                when(transactionRepository.findByIdAndUserId(29L, OWNER_ID)).thenReturn(Optional.of(existing));
+                when(incomeCategorizationService.categorize(null, OWNER_ID)).thenReturn(otherIncome);
+                TransactionRequest request = new TransactionRequest(
+                                new BigDecimal("400.00"), null, null,
+                                TransactionType.INCOME, LocalDate.of(2026, 8, 1));
+
+                TransactionResponse response = transactionService.update(29L, OWNER_ID, request);
+
+                assertThat(response.description()).isNull();
+                assertThat(response.categoryId()).isEqualTo(4L);
+                assertThat(response.categoryName()).isEqualTo("Other Income");
+                verify(incomeCategorizationService).categorize(null, OWNER_ID);
+        }
+
+        @Test
+        void create_preservesExplicitCategoryEvenIfDescriptionContainsOtherKeywords() {
+                Category healthcare = TestEntities.withId(
+                                new Category("Healthcare", TransactionType.EXPENSE, null), 6L);
+                when(userRepository.getReferenceById(OWNER_ID)).thenReturn(owner);
+                when(categoryRepository.findById(6L)).thenReturn(Optional.of(healthcare));
+                when(transactionRepository.save(any(Transaction.class))).thenAnswer(invocation -> {
+                        Transaction saved = invocation.getArgument(0);
+                        return TestEntities.withId(saved, 23L);
+                });
+                TransactionRequest request = new TransactionRequest(
+                                new BigDecimal("2500.00"), "Amazon clothes", 6L,
+                                TransactionType.EXPENSE, LocalDate.of(2026, 8, 10));
+
+                TransactionResponse response = transactionService.create(OWNER_ID, request);
+
+                assertThat(response.categoryId()).isEqualTo(6L);
+                assertThat(response.categoryName()).isEqualTo("Healthcare");
                 verify(expenseCategorizationService, never()).categorize(any(), eq(OWNER_ID));
+        }
+
+        @Test
+        void create_handlesNullDescriptionSafely() {
+                when(userRepository.getReferenceById(OWNER_ID)).thenReturn(owner);
+                when(expenseCategorizationService.categorize(null, OWNER_ID)).thenReturn(null);
+                when(transactionRepository.save(any(Transaction.class))).thenAnswer(invocation -> {
+                        Transaction saved = invocation.getArgument(0);
+                        return TestEntities.withId(saved, 24L);
+                });
+                TransactionRequest request = new TransactionRequest(
+                                new BigDecimal("100.00"), null, null,
+                                TransactionType.EXPENSE, LocalDate.of(2026, 8, 10));
+
+                TransactionResponse response = transactionService.create(OWNER_ID, request);
+
+                assertThat(response.description()).isNull();
+                assertThat(response.categoryId()).isNull();
+                verify(expenseCategorizationService).categorize(null, OWNER_ID);
+        }
+
+        @Test
+        void create_swiggyDinnerAutoCategorizesToFoodAndDining() {
+                Category foodAndDining = TestEntities.withId(
+                                new Category("Food & Dining", TransactionType.EXPENSE, null), 2L);
+                when(userRepository.getReferenceById(OWNER_ID)).thenReturn(owner);
+                when(expenseCategorizationService.categorize("Swiggy dinner", OWNER_ID))
+                                .thenReturn(foodAndDining);
+                when(transactionRepository.save(any(Transaction.class))).thenAnswer(invocation -> {
+                        Transaction saved = invocation.getArgument(0);
+                        return TestEntities.withId(saved, 25L);
+                });
+                TransactionRequest request = new TransactionRequest(
+                                new BigDecimal("450.00"), "Swiggy dinner", null,
+                                TransactionType.EXPENSE, LocalDate.of(2026, 8, 10));
+
+                TransactionResponse response = transactionService.create(OWNER_ID, request);
+
+                assertThat(response.categoryId()).isEqualTo(2L);
+                assertThat(response.categoryName()).isEqualTo("Food & Dining");
+                verify(expenseCategorizationService).categorize("Swiggy dinner", OWNER_ID);
+        }
+
+        @Test
+        void create_unknownExpenseFallsBackToOtherExpense() {
+                Category otherExpense = TestEntities.withId(
+                                new Category("Other Expense", TransactionType.EXPENSE, null), 10L);
+                when(userRepository.getReferenceById(OWNER_ID)).thenReturn(owner);
+                when(expenseCategorizationService.categorize("Unknown local purchase", OWNER_ID))
+                                .thenReturn(otherExpense);
+                when(transactionRepository.save(any(Transaction.class))).thenAnswer(invocation -> {
+                        Transaction saved = invocation.getArgument(0);
+                        return TestEntities.withId(saved, 26L);
+                });
+                TransactionRequest request = new TransactionRequest(
+                                new BigDecimal("75.00"), "Unknown local purchase", null,
+                                TransactionType.EXPENSE, LocalDate.of(2026, 8, 10));
+
+                TransactionResponse response = transactionService.create(OWNER_ID, request);
+
+                assertThat(response.categoryId()).isEqualTo(10L);
+                assertThat(response.categoryName()).isEqualTo("Other Expense");
+                verify(expenseCategorizationService).categorize("Unknown local purchase", OWNER_ID);
+        }
+
+        @Test
+        void update_handlesNullDescriptionSafely() {
+                Transaction existing = TestEntities.withId(
+                                new Transaction(owner, new BigDecimal("100.00"), "Old desc", null,
+                                                TransactionType.EXPENSE, LocalDate.of(2026, 8, 1)),
+                                27L);
+                when(transactionRepository.findByIdAndUserId(27L, OWNER_ID)).thenReturn(Optional.of(existing));
+                when(expenseCategorizationService.categorize(null, OWNER_ID)).thenReturn(null);
+                TransactionRequest request = new TransactionRequest(
+                                new BigDecimal("120.00"), null, null,
+                                TransactionType.EXPENSE, LocalDate.of(2026, 8, 5));
+
+                TransactionResponse response = transactionService.update(27L, OWNER_ID, request);
+
+                assertThat(response.description()).isNull();
+                assertThat(response.categoryId()).isNull();
+                verify(expenseCategorizationService).categorize(null, OWNER_ID);
         }
 }

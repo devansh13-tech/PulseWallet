@@ -1,5 +1,6 @@
 package com.pulsewallet.pulsewallet.service;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
@@ -38,13 +39,25 @@ public class CreditCardService {
                 user,
                 request.issuer().trim(),
                 request.cardName().trim(),
+                cleanText(request.cardNetwork()),
                 request.lastFourDigits(),
                 request.creditLimit(),
                 request.currentOutstanding(),
                 request.statementDate(),
                 request.dueDate(),
+                request.annualFee() == null ? BigDecimal.ZERO : request.annualFee(),
                 cleanText(request.rewardsDescription()),
                 cleanText(request.benefitsDescription()));
+        if (request.statementBalance() != null) {
+            card.setStatementBalance(request.statementBalance());
+            card.setLastStatementSyncAt(java.time.Instant.now());
+        }
+        if (request.minimumDue() != null) {
+            card.setMinimumDue(request.minimumDue());
+        }
+        if (request.dataSource() != null && !request.dataSource().isBlank()) {
+            card.setDataSource(request.dataSource().trim());
+        }
         return CreditCardResponse.from(creditCardRepository.save(card));
     }
 
@@ -66,11 +79,23 @@ public class CreditCardService {
         CreditCard card = requireOwned(id, userId);
         card.setIssuer(request.issuer().trim());
         card.setCardName(request.cardName().trim());
+        card.setCardNetwork(cleanText(request.cardNetwork()));
         card.setLastFourDigits(request.lastFourDigits());
         card.setCreditLimit(request.creditLimit());
         card.setCurrentOutstanding(request.currentOutstanding());
         card.setStatementDate(request.statementDate());
         card.setDueDate(request.dueDate());
+        card.setAnnualFee(request.annualFee() == null ? BigDecimal.ZERO : request.annualFee());
+        if (request.statementBalance() != null) {
+            card.setStatementBalance(request.statementBalance());
+            card.setLastStatementSyncAt(java.time.Instant.now());
+        }
+        if (request.minimumDue() != null) {
+            card.setMinimumDue(request.minimumDue());
+        }
+        if (request.dataSource() != null && !request.dataSource().isBlank()) {
+            card.setDataSource(request.dataSource().trim());
+        }
         card.setRewardsDescription(cleanText(request.rewardsDescription()));
         card.setBenefitsDescription(cleanText(request.benefitsDescription()));
         return CreditCardResponse.from(card);
@@ -79,6 +104,14 @@ public class CreditCardService {
     @Transactional
     public void delete(Long id, Long userId) {
         creditCardRepository.delete(requireOwned(id, userId));
+    }
+
+    public BigDecimal calculateAvailableCredit(BigDecimal creditLimit, BigDecimal currentOutstanding) {
+        return CreditCardResponse.calculateAvailableCredit(creditLimit, currentOutstanding);
+    }
+
+    public BigDecimal calculateCreditUtilization(BigDecimal creditLimit, BigDecimal currentOutstanding) {
+        return CreditCardResponse.calculateUtilization(creditLimit, currentOutstanding);
     }
 
     private CreditCard requireOwned(Long id, Long userId) {
@@ -90,12 +123,38 @@ public class CreditCardService {
         if (request == null) {
             throw new IllegalArgumentException("Request must not be null");
         }
-        if (request.lastFourDigits() != null && !request.lastFourDigits().matches("\\d{4}")) {
+        if (request.issuer() == null || request.issuer().isBlank()) {
+            throw new IllegalArgumentException("issuer must not be blank");
+        }
+        if (request.cardName() == null || request.cardName().isBlank()) {
+            throw new IllegalArgumentException("cardName must not be blank");
+        }
+        if (request.lastFourDigits() == null || !request.lastFourDigits().matches("\\d{4}")) {
             throw new IllegalArgumentException("lastFourDigits must be exactly 4 numeric digits");
         }
-        if (request.currentOutstanding() != null && request.creditLimit() != null
-                && request.currentOutstanding().compareTo(request.creditLimit()) > 0) {
+        if (request.creditLimit() == null || request.creditLimit().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("creditLimit must be greater than 0");
+        }
+        if (request.currentOutstanding() == null || request.currentOutstanding().compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("currentOutstanding must be zero or greater");
+        }
+        if (request.currentOutstanding().compareTo(request.creditLimit()) > 0) {
             throw new IllegalArgumentException("currentOutstanding must not exceed creditLimit");
+        }
+        if (request.statementDate() == null) {
+            throw new IllegalArgumentException("statementDate is required");
+        }
+        if (request.dueDate() == null) {
+            throw new IllegalArgumentException("dueDate is required");
+        }
+        if (request.annualFee() != null && request.annualFee().compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("annualFee must be zero or greater");
+        }
+        if (request.statementBalance() != null && request.statementBalance().compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("statementBalance must be zero or greater");
+        }
+        if (request.minimumDue() != null && request.minimumDue().compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("minimumDue must be zero or greater");
         }
     }
 

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { categoryApi, transactionApi } from '../lib/api';
 import { formatMoneyAmount, useSelectedCurrency } from '../utils/currency';
+import { PageNavHeader, PageNavFooter } from '../components/PageNavigation.jsx';
 
 function formatMoney(value, currencyCode) {
     return formatMoneyAmount(value, currencyCode);
@@ -25,6 +26,10 @@ export default function TransactionsPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [categories, setCategories] = useState([]);
+    const [page, setPage] = useState(0);
+    const [totalPages, setTotalPages] = useState(1);
+    const [totalElements, setTotalElements] = useState(0);
+    const pageSize = 15;
 
     useEffect(() => {
         let mounted = true;
@@ -33,11 +38,13 @@ export default function TransactionsPage() {
             setError('');
             try {
                 const [transactionResult, categoryResult] = await Promise.all([
-                    transactionApi.list({ page: 0, size: 50, sort: 'transactionDate,desc' }),
+                    transactionApi.list({ page, size: pageSize, sort: 'transactionDate,desc' }),
                     categoryApi.list(),
                 ]);
                 if (!mounted) return;
                 setTransactions(Array.isArray(transactionResult?.content) ? transactionResult.content : []);
+                setTotalPages(transactionResult?.totalPages ?? 1);
+                setTotalElements(transactionResult?.totalElements ?? 0);
                 setCategories(Array.isArray(categoryResult) ? categoryResult : []);
             } catch (err) {
                 if (!mounted) return;
@@ -49,7 +56,7 @@ export default function TransactionsPage() {
 
         load();
         return () => { mounted = false; };
-    }, []);
+    }, [page]);
 
     const categoryMap = useMemo(
         () => Object.fromEntries(categories.map((category) => [String(category.id), category.name])),
@@ -67,6 +74,7 @@ export default function TransactionsPage() {
 
     return (
         <div className="page-shell">
+            <PageNavHeader title="Transactions" />
             <div className="page-header">
                 <div>
                     <p className="eyebrow">PulseWallet</p>
@@ -86,7 +94,8 @@ export default function TransactionsPage() {
                         <Link to="/transactions/new">Create one</Link>
                     </div>
                 ) : (
-                    <div className="table-wrap">
+                    <>
+                        <div className="table-wrap">
                         <table className="data-table">
                             <thead>
                                 <tr>
@@ -121,8 +130,40 @@ export default function TransactionsPage() {
                             </tbody>
                         </table>
                     </div>
+                    {totalElements > 0 && (
+                        <div className="table-pagination">
+                            <div className="pagination-info">
+                                Showing {transactions.length} of {totalElements} transactions
+                            </div>
+                            <div className="pagination-actions">
+                                <button
+                                    type="button"
+                                    className="secondary-btn small"
+                                    onClick={() => setPage((p) => Math.max(0, p - 1))}
+                                    disabled={page === 0}
+                                    id="btn-prev-page"
+                                >
+                                    ← Previous Page
+                                </button>
+                                <span className="page-pill">
+                                    Page {page + 1} of {Math.max(1, totalPages)}
+                                </span>
+                                <button
+                                    type="button"
+                                    className="secondary-btn small"
+                                    onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+                                    disabled={page >= totalPages - 1}
+                                    id="btn-next-page"
+                                >
+                                    Next Page →
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                    </>
                 )}
             </div>
+            <PageNavFooter />
         </div>
     );
 }

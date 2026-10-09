@@ -47,6 +47,9 @@ public class CreditCard {
     @Column(name = "card_name", nullable = false, length = 120)
     private String cardName;
 
+    @Column(name = "card_network", length = 50)
+    private String cardNetwork;
+
     @JdbcTypeCode(SqlTypes.CHAR)
     @Column(name = "last_four_digits", nullable = false, length = 4)
     private String lastFourDigits;
@@ -62,6 +65,21 @@ public class CreditCard {
 
     @Column(name = "due_date", nullable = false)
     private LocalDate dueDate;
+
+    @Column(name = "annual_fee", precision = 19, scale = 2)
+    private BigDecimal annualFee;
+
+    @Column(name = "statement_balance", precision = 19, scale = 2)
+    private BigDecimal statementBalance;
+
+    @Column(name = "minimum_due", precision = 19, scale = 2)
+    private BigDecimal minimumDue;
+
+    @Column(name = "data_source", length = 50)
+    private String dataSource = "MANUAL";
+
+    @Column(name = "last_statement_sync_at")
+    private Instant lastStatementSyncAt;
 
     @Column(name = "rewards_description", length = 500)
     private String rewardsDescription;
@@ -83,14 +101,24 @@ public class CreditCard {
             BigDecimal creditLimit, BigDecimal currentOutstanding,
             LocalDate statementDate, LocalDate dueDate,
             String rewardsDescription, String benefitsDescription) {
+        this(user, issuer, cardName, null, lastFourDigits, creditLimit, currentOutstanding,
+                statementDate, dueDate, BigDecimal.ZERO, rewardsDescription, benefitsDescription);
+    }
+
+    public CreditCard(User user, String issuer, String cardName, String cardNetwork,
+            String lastFourDigits, BigDecimal creditLimit, BigDecimal currentOutstanding,
+            LocalDate statementDate, LocalDate dueDate, BigDecimal annualFee,
+            String rewardsDescription, String benefitsDescription) {
         this.user = user;
         this.issuer = issuer;
         this.cardName = cardName;
+        this.cardNetwork = cardNetwork;
         this.lastFourDigits = lastFourDigits;
         this.creditLimit = creditLimit;
         this.currentOutstanding = currentOutstanding;
         this.statementDate = statementDate;
         this.dueDate = dueDate;
+        this.annualFee = annualFee == null ? BigDecimal.ZERO : annualFee;
         this.rewardsDescription = rewardsDescription;
         this.benefitsDescription = benefitsDescription;
     }
@@ -145,6 +173,14 @@ public class CreditCard {
         return dueDate;
     }
 
+    public String getCardNetwork() {
+        return cardNetwork;
+    }
+
+    public BigDecimal getAnnualFee() {
+        return annualFee;
+    }
+
     public String getRewardsDescription() {
         return rewardsDescription;
     }
@@ -171,6 +207,10 @@ public class CreditCard {
         this.cardName = cardName;
     }
 
+    public void setCardNetwork(String cardNetwork) {
+        this.cardNetwork = cardNetwork;
+    }
+
     public void setLastFourDigits(String lastFourDigits) {
         this.lastFourDigits = lastFourDigits;
     }
@@ -189,6 +229,42 @@ public class CreditCard {
 
     public void setDueDate(LocalDate dueDate) {
         this.dueDate = dueDate;
+    }
+
+    public void setAnnualFee(BigDecimal annualFee) {
+        this.annualFee = annualFee;
+    }
+
+    public BigDecimal getStatementBalance() {
+        return statementBalance;
+    }
+
+    public void setStatementBalance(BigDecimal statementBalance) {
+        this.statementBalance = statementBalance;
+    }
+
+    public BigDecimal getMinimumDue() {
+        return minimumDue;
+    }
+
+    public void setMinimumDue(BigDecimal minimumDue) {
+        this.minimumDue = minimumDue;
+    }
+
+    public String getDataSource() {
+        return dataSource;
+    }
+
+    public void setDataSource(String dataSource) {
+        this.dataSource = dataSource;
+    }
+
+    public Instant getLastStatementSyncAt() {
+        return lastStatementSyncAt;
+    }
+
+    public void setLastStatementSyncAt(Instant lastStatementSyncAt) {
+        this.lastStatementSyncAt = lastStatementSyncAt;
     }
 
     public void setRewardsDescription(String rewardsDescription) {

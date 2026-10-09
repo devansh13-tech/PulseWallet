@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { notificationApi } from '../lib/api';
+import { PageNavHeader, PageNavFooter } from '../components/PageNavigation.jsx';
 
 function formatDateTime(value) {
     if (!value) return '—';
@@ -57,6 +58,7 @@ export default function AlertsPage() {
 
     return (
         <div className="page-shell">
+            <PageNavHeader title="Alerts & Notifications" />
             <div className="page-header">
                 <div>
                     <p className="eyebrow">PulseWallet</p>
@@ -94,6 +96,7 @@ export default function AlertsPage() {
                     </ul>
                 )}
             </div>
+            <PageNavFooter />
         </div>
     );
 }

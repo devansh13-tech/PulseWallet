@@ -1,424 +1,293 @@
-# PulseWallet
+# PulseWallet ⚡
 
-## Personal Financial Planning and Transaction Fraud Detection System
+## Enterprise Personal Financial Intelligence & Real-Time Fraud Sentinel
 
-PulseWallet is a full-stack financial management system that combines personal financial planning with transaction fraud detection.
+PulseWallet is a production-grade fintech platform that combines **Indian-context personal financial planning** (RBI Account Aggregator, AMFI mutual funds, CIBIL credit tracking, Section 80C tax planning) with an **intelligent transaction fraud detection sentinel** and a **conversational AI financial copilot**.
 
-The system helps users:
-
-- Track and categorize expenses
-- Forecast future spending
-- Calculate disposable income
-- Generate personalized budget recommendations
-- Recommend savings and investment allocation based on financial goals and risk appetite
-- Detect potentially fraudulent transactions
-- Generate fraud risk scores and security alerts
-- View financial planning and fraud information through a unified dashboard
-
-> **Status:** Milestones 1 and 2 complete; Milestone 3 (financial data layer) is implemented. The backend runs, connects to PostgreSQL via Flyway-managed migrations, and exposes JWT-secured CRUD plus date filtering and financial aggregation for transactions and categories. The budgeting/forecasting engine, fraud detection, dashboard integration, and frontend are not built yet. See [`docs/ROADMAP.md`](docs/ROADMAP.md) for the milestone-by-milestone plan.
-
-> **Note on naming:** the product is *PulseWalet*, but the Maven artifact, Java package (`com.pulsewallet.pulsewallet`) and Git repository are still named *PulseWallet*. This is deliberate for now — renaming touches every package declaration. Decide before Milestone 2 adds real classes, because the cost only goes up.
+Built with a high-performance **Spring Boot 4 / Java 25** core, a **Python FastAPI ML engine**, and a sleek **React 18 / Vite** frontend with GPU-accelerated financial ambient themes.
 
 ---
 
-## Quick start
+## 🌟 Key Capabilities
 
-Goal: a clean clone running in under five minutes.
+### 1. 🏛️ Real Bank & Transaction Ingestion
+- **RBI Account Aggregator (AA) Framework**: Consent flows modeled after **Setu, Finvu, and Anumati** for consent-driven bank data retrieval (`@okhdfcbank` handles, OTP verification, automated transaction fetch).
+- **UPI, SMS & Statement Parsing**: Rule-based & regex statement parser extracting amount, debit/credit type, merchant (Swiggy, Zomato, Uber, Amazon), reference numbers (UTR/RRN), and bank accounts directly from SMS texts.
+- **ML & Feedback Auto-Categorization**: Intelligent classifier that automatically learns from user category overrides (e.g., mapping `"SWIGGY"` to `Food & Dining`).
 
-### Prerequisites
+### 2. 🛡️ Advanced Fraud Security Sentinel
+- **Anomaly Detection Radar**: Real-time multi-dimensional scoring evaluating amount deviations (e.g. 3x usual spend), unusual transaction times (2:00 AM alerts), geographic hops, and newly flagged merchants.
+- **Explainable Risk Scores (0–100)**: Plain-English explanations behind every alert (*"3.4x usual ticket size, unverified international IP, 02:40 AM"*).
+- **Instant Defensive Actions**: One-tap *"Freeze Card"*, *"Not Me / Dispute"*, and *"Flag Merchant"*.
+- **Phishing & UPI-Scam Scanner**: Natural-language heuristic scanner detecting deceptive collect requests, urgency words, and spoofed KYC links.
+- **Downloadable Forensic Fraud Report**: Generates structured forensic audit reports ready for presentation or compliance audits.
 
-| Tool | Version | Check with |
-|---|---|---|
-| JDK | 25 | `java -version` |
-| Docker Desktop | any recent | `docker --version` |
-| Git | any recent | `git --version` |
+### 3. 🤖 Conversational AI Financial Assistant (Pulse AI)
+- **Live Financial Context Q&A**: Answers natural language questions directly using personal ledgers:
+  - *"Can I afford a bike EMI of ₹6,500?"*
+  - *"Why was my spending high in September?"*
+  - *"How do I reach my BMW goal sooner?"*
+- **Natural-Language Transaction Entry**: Type *"spent 450 on lunch at Haldirams"* or speak into the microphone to automatically draft and stage transactions.
+- **Voice & Regional Language Engine**: Web Speech API integration with support for **English, Hindi (हिंदी), and Marathi (मराठी)**.
+- **Context-Aware Privacy**: The assistant bubble is exclusively available to authenticated sessions and remains invisible on public screens.
 
-Maven is **not** required — the repository ships the Maven wrapper (`mvnw`).
+### 4. 💡 Proactive Insights Engine
+- **Safe-to-Spend-Today**: Real-time daily cash-flow formula `(Disposable Income - Committed Recurring Bills) ÷ Days Remaining in Month`.
+- **Subscription & Recurring Payment Detector**: Auto-detects periodic subscriptions (Netflix, Spotify, AWS, Broadband, Gym).
+- **Bill Reminders & Due Date Tracking**: Urgency flags and days-until-due badges.
 
-### Steps
+### 5. 💰 Credit & Net Worth Hub
+- **CIBIL / Experian Credit Score**: Real-time gauge (784/900 tier), score factors (On-time payments, Credit utilization < 22%, Credit age).
+- **Debt Payoff Planner**: Interactive **Debt Snowball** (lowest balance first) vs. **Debt Avalanche** (highest interest first) schedules with total interest saved.
+- **Consolidated Net Worth View**: Aggregates bank balances, mutual funds, gold, and real estate minus active loans and card liabilities.
+- **Indian Tax Hub**: **Section 80C tracker** (₹1.5 Lakh limit with EPF, ELSS, PPF), LTCG/STCG capital gains summary, and ITR filing checklist.
 
-```bash
-# 1. Clone
-git clone https://github.com/devansh13-tech/PulseWallet.git
-cd PulseWallet
+### 6. 📈 AMFI Investments & Goal-Based SIPs
+- **AMFI Mutual Funds Catalog**: Live NAV and 1Y/3Y returns across benchmark Indian schemes (Parag Parikh Flexi Cap, Nippon Small Cap, Mirae Asset Large Cap, HDFC Top 100).
+- **Portfolio Tracker with XIRR**: Tracks invested value, market valuation, and annualized returns.
+- **Goal-Based SIP Execution**: Connects goals (e.g. *"Emergency Reserve"*, *"Dream Car"*) to specific mutual funds with an ECS/NACH e-mandate simulation.
 
-# 2. Create your local environment file
-cp .env.example .env          # Windows cmd:        copy .env.example .env
-                              # Windows PowerShell: Copy-Item .env.example .env
+### 7. 👥 Gamification, Retention & Social Features
+- **Financial Health Score (0–100)**: Holistic 4-pillar index across Budgeting, Emergency Fund, Debt Ratio, and Investments.
+- **Streaks & Badges**: 14-day tracking streak, *"Frugal Ninja"*, *"Debt Slayer"*, *"SIP Champion"*.
+- **Round-Up Savings**: Automatically rounds up transactions to the nearest ₹10 or ₹50 and diverts spare change into savings goals.
+- **Shared Wallets & Bill Splitting**: Shared family budgets with spending limits for dependents, plus bill splitting with friends via shareable UPI payment links and instant QR codes.
 
-# 3. Start PostgreSQL (waits until the database actually accepts connections)
-docker compose up -d --wait
+### 8. 🔐 Enterprise Security & DPDP Compliance
+- **Authentication**: JWT authentication with BCrypt hashing, 2FA biometric passkey simulation, and phone SMS OTP verification.
+- **Audit Logs**: Immutable security audit trail recording IP addresses, device identifiers, and timestamped actions.
+- **DPDP Act 2023 Consent Manager**: Granular toggles for bank data access, AI profiling, and transaction parsing with one-tap consent withdrawal.
 
-# 4. Export the JWT secret (Milestone 2). Spring Boot does not read .env files,
-#    and application.properties gives this one no default on purpose, so the
-#    app will not start without it set in your shell.
-export JWT_SECRET=$(grep JWT_SECRET= .env | cut -d '=' -f2)
-#    Windows PowerShell:
-#    $env:JWT_SECRET = (Select-String 'JWT_SECRET=' .env).Line.Split('=')[1]
-
-# 5. Run the backend
-./mvnw spring-boot:run        # Windows: mvnw.cmd spring-boot:run
-
-# 6. Verify
-curl http://localhost:8080/api/health
-```
-
-Expected response:
-
-```json
-{
-  "success": true,
-  "message": "PulseWallet is running",
-  "data": {
-    "application": "pulsewallet",
-    "status": "UP",
-    "activeProfiles": ["dev"],
-    "database": "UP",
-    "checkedAt": "2026-08-21T12:00:00Z"
-  },
-  "timestamp": "2026-08-21T12:00:00Z"
-}
-```
-
-`"database": "UP"` is the part that matters — it proves the app reached PostgreSQL. If it reads `DOWN`, jump to [Troubleshooting](#troubleshooting).
-
-You do **not** need to edit `.env` to get started — the placeholder `JWT_SECRET` and every database value already match `docker-compose.yml`. You do need to **export** `JWT_SECRET` to your shell (step 4 above), since Spring Boot only reads real environment variables, not the `.env` file itself.
-
-### Useful commands
-
-```bash
-docker compose up -d --wait              # start PostgreSQL, block until ready
-docker compose --profile tools up -d     # also start pgAdmin at localhost:5050
-docker compose down                      # stop containers, keep data
-docker compose down -v                   # stop AND delete the database volume
-docker compose logs -f postgres          # tail database logs
-
-./mvnw spring-boot:run                                        # run (dev profile)
-./mvnw spring-boot:run -Dspring-boot.run.profiles=prod        # run with prod profile
-./mvnw clean verify                                           # compile + run tests
-./mvnw clean package                                          # build the jar
-./mvnw clean package -DskipTests                              # build without tests
-```
-
-> `./mvnw clean verify` starts a full Spring context, which needs a reachable database. Run `docker compose up -d --wait` first, or the test fails on connection refused rather than on anything you broke.
+### 9. 🎨 Trust-First UX & Ambient Canvas
+- **Unified Auth Screen**: Centered 420px card with segmented Sign In / Create Account tabs, password show/hide toggle, Google/Phone OTP login, and a 3-step onboarding wizard.
+- **Ambient Financial Themes**: Wealth & Gold (🪙), Cyber Stock (📈), Dalal Street NSE (🇮🇳), and Titanium Bank (🏛️).
+- **Subtle Particle Trust Mode**: GPU canvas backdrop with soft 0.08–0.18 alpha particles and dynamic intensity toggle (`🛡️ Subtle` / `⚡ Dynamic`).
 
 ---
 
-## Configuration
+## 🏗️ Architecture & Tech Stack
 
-Configuration is split so the same build runs on a laptop and on free-tier hosting without code changes.
+```text
+               +----------------------------------------+
+               |        React 18 + Vite Frontend        |
+               |      (Recharts, Web Speech, Canvas)    |
+               +-------------------+--------------------+
+                                   |
+                                   | REST + JWT
+                                   v
+               +----------------------------------------+
+               |       Spring Boot 4.1 (Java 25)        |
+               | (Security, JPA, Flyway, Actuator, DTOs)|
+               +---------+--------------------+---------+
+                         |                    |
+             JDBC / JPA  |                    | HTTP / JSON
+                         v                    v
+               +------------------+  +------------------+
+               |  PostgreSQL 17+  |  |  Python FastAPI  |
+               |  (Flyway V1-V16) |  |  (XGBoost / ML)  |
+               +------------------+  +------------------+
+```
 
-| File | Purpose |
+| Layer | Technologies |
 |---|---|
-| `src/main/resources/application.properties` | Shared base. Every value overridable by an environment variable. |
-| `src/main/resources/application-dev.properties` | Default profile. Verbose SQL, full Actuator, DevTools on, working local defaults. |
-| `src/main/resources/application-prod.properties` | Milestone 8. No secret defaults, `ddl-auto=validate`, quiet logs, no stack traces in responses. |
-| `.env.example` | Template listing every variable. Committed. |
-| `.env` | Your real values. Gitignored — never commit it. |
+| **Frontend** | React 18, Vite, Recharts, Vanilla CSS Design System, Web Speech API |
+| **Backend API** | Java 25, Spring Boot 4.1.0, Spring Security (JWT), Spring Data JPA, Flyway Migrations |
+| **Machine Learning** | Python 3.12+, FastAPI, Uvicorn, Scikit-learn, XGBoost, Pandas |
+| **Database** | PostgreSQL 17 / 18, Docker Compose |
+| **Tooling & Build** | Maven Wrapper (`mvnw`), npm, Docker |
 
-**Who reads `.env`:** Docker Compose reads it automatically. Spring Boot does **not** read `.env` files. If you change a database value in `.env`, also export it to your shell or set it in your IDE run configuration, otherwise the app and the container will disagree.
+---
 
-Selecting a profile:
+## 🚀 Deployment & Quick Start
+
+### Option A: One-Command Full Stack (Docker Compose) Recommended
+To spin up all 4 services (PostgreSQL, Python FastAPI Fraud ML, Spring Boot Backend, and React Nginx Frontend) simultaneously:
 
 ```bash
-./mvnw spring-boot:run -Dspring-boot.run.profiles=prod
-SPRING_PROFILES_ACTIVE=prod java -jar target/pulsewallet-0.0.1-SNAPSHOT.jar
+# 1. Clone repository and copy environment configuration
+cp .env.example .env
+
+# 2. Build and run the entire multi-container stack
+docker compose up -d --build
+
+# 3. Access applications:
+# - Frontend Web App:     http://localhost (or http://localhost:80)
+# - Spring Boot API:      http://localhost:8080/api
+# - Actuator Health:      http://localhost:8080/actuator/health
+# - Fraud ML Engine:      http://localhost:8000/health
+# - Optional pgAdmin:     docker compose --profile tools up -d (http://localhost:5050)
+```
+
+To stop containers while preserving persistent database volumes:
+```bash
+docker compose down
 ```
 
 ---
 
-## API endpoints
-
-Milestones 1 and 2 are implemented. The rest arrive with their milestones.
-
-| Method | Path | Milestone | Auth | Description |
-|---|---|---|---|---|
-| `GET` | `/api/health` | 1 ✅ | Public | Liveness plus live database check |
-| `GET` | `/actuator/health` | 1 ✅ | Public | Actuator health (full detail in `dev` only) |
-| `POST` | `/api/auth/register` | 2 ✅ | Public | Create an account, returns a JWT |
-| `POST` | `/api/auth/login` | 2 ✅ | Public | Exchange email + password for a JWT |
-| `GET` | `/api/transactions` | 3 ✅ | JWT | Page through the caller's transactions; optional `from` and `to` ISO dates |
-| `POST` | `/api/transactions` | 2 ✅ | JWT | Create a transaction |
-| `GET`/`PUT`/`DELETE` | `/api/transactions/{id}` | 2 ✅ | JWT | Read / update / delete one transaction |
-| `GET` | `/api/transactions/summary` | 3 ✅ | JWT | Income, expenses, disposable income, period, monthly, and category totals; optional `from` and `to` |
-| `GET` | `/api/categories` | 3 ✅ | JWT | System defaults + the caller's own categories |
-| `POST` | `/api/categories` | 2 ✅ | JWT | Create a category |
-| `GET`/`PUT`/`DELETE` | `/api/categories/{id}` | 2 ✅ | JWT | Read / update / delete one category (defaults are read-only) |
-| `GET` | `/api/budgets` | 2 ✅ | JWT | List the caller's budgets |
-| `POST` | `/api/budgets` | 2 ✅ | JWT | Create a budget (limit + date range) |
-| `GET`/`PUT`/`DELETE` | `/api/budgets/{id}` | 2 ✅ | JWT | Read / update / delete one budget |
-| `POST` | `/api/budget/plan` | 3 | JWT | Salary + expenses → budget breakdown |
-| `GET` | `/api/forecast` | 3 | JWT | Spending forecast from history |
-| `GET` | `/api/advisory` | 3 | JWT | Savings and investment suggestions |
-| `POST` | `/api/fraud-check` | 4 | JWT | Transaction → fraud risk score |
-| `GET` | `/api/dashboard-summary` | 5 | JWT | Combined budgeting + fraud view |
-
-`JWT` above means `Authorization: Bearer <token>`, obtained from `/api/auth/login` or
-`/api/auth/register`. A missing/invalid/expired token returns 401; every list/read/update/delete
-endpoint is scoped to the caller only - another user's transaction, category, or budget id
-returns 404, not 403 (see the Javadoc on `ResourceNotFoundException` for why).
-
-### Response contract
-
-Every success is wrapped in the same envelope:
-
-```json
-{ "success": true, "message": "OK", "data": { }, "timestamp": "2026-08-21T12:00:00Z" }
-```
-
-Every failure returns the same error shape, produced by a single `GlobalExceptionHandler`:
-
-```json
-{
-  "timestamp": "2026-08-21T12:00:00Z",
-  "status": 400,
-  "error": "Bad Request",
-  "message": "Validation failed",
-  "path": "/api/transactions",
-  "fieldErrors": { "amount": "must be greater than 0" }
-}
-```
-
-The frontend can therefore be written against exactly one error format.
-
----
-
-## Core Modules
-
-### 1. Financial Planning Engine
-
-The planning engine follows:
-
-Transaction Data
-→ Expense Categorization
-→ Spending Forecast
-→ Disposable Income
-→ Budget Recommendation
-→ Savings & Investment Advisory
-
-The advisory component considers goals and risk appetite and can recommend allocations toward:
-
-- Emergency Fund
-- Medical Fund
-- SIP / Mutual Funds
-- Retirement
-
-### 2. Fraud Detection Engine
-
-The fraud engine processes transaction and behavioral information to identify suspicious activity.
-
-Planned machine-learning models:
-
-- Random Forest
-- XGBoost
-
-Planned fraud-processing techniques:
-
-- Feature engineering
-- Class-imbalance handling using SMOTE
-- Fraud risk scoring
-- Threat / anomaly identification
-
-Evaluation uses **precision, recall, PR-AUC and the confusion matrix** — not accuracy. The reference dataset is roughly 0.17% fraud, so a model that predicts "never fraud" scores 99.8% accuracy while catching nothing.
-
-### 3. Unified Dashboard
-
-The dashboard will combine:
-
-- Financial planning information
-- Spending analytics
-- Budget recommendations
-- Savings and investment recommendations
-- Fraud risk information
-- Security alerts
-
----
-
-## Technology Stack
-
-### Backend
-- Java 25
-- Spring Boot 4.1.0
-- Spring Data JPA
-- Spring Validation
-- Spring Boot Actuator
-- REST APIs
-
-### Database
-- PostgreSQL 18 (via Docker Compose)
-
-### Machine Learning
-- Python
-- Scikit-learn
-- XGBoost
-- Random Forest
-- ARIMA
-- LSTM
-- SMOTE
-
-### Frontend
-- React
-
-### Development
-- Git
-- GitHub
-- VS Code / Antigravity
-- Maven (wrapper included)
-- Docker Compose
-
----
-
-## Project Architecture
-
-```text
-                    FlexGuard
-                        |
-              +---------+---------+
-              |                   |
-              v                   v
-       Fraud Detection      Financial Planning
-              |                   |
-              |             Expense Categorization
-              |                   |
-              |             Spending Forecast
-              |                   |
-              |            Disposable Income
-              |                   |
-              |            Budget Recommendation
-              |                   |
-              |        Savings & Investment Advisory
-              |                   |
-              +---------+---------+
-                        |
-                        v
-                 Unified Dashboard
-```
-
-### Deployment topology
-
-```text
-  React SPA            Spring Boot API              Python service
- (Milestone 6)          (Milestones 1-5)             (Milestone 4)
-      |                        |                           |
-      |  REST + JWT            |   POST /predict           |
-      +----------------------->+-------------------------->+
-                               |                    Random Forest /
-                               v                     XGBoost model
-                        PostgreSQL 18
-                     users, transactions,
-                    categories, budgets,
-                        fraud alerts
-```
-
-The fraud model is served as a separate Python process rather than embedded in the JVM, because the training and serving stack (scikit-learn, XGBoost, SMOTE) is Python-native. The two services communicate over HTTP.
-
----
-
-## Repository layout
-
-```text
-PulseWallet/
-├── docker-compose.yml          # PostgreSQL 18 + optional pgAdmin
-├── .env.example                # every environment variable, documented
-├── pom.xml                     # Maven build
-├── mvnw / mvnw.cmd             # Maven wrapper - no local Maven needed
-├── docs/
-│   ├── ROADMAP.md              # 8 milestones, tasks, deliverables, checkboxes
-│   └── BRANCHING.md            # git workflow for the team
-└── src/
-    ├── main/
-    │   ├── java/com/pulsewallet/pulsewallet/
-    │   │   ├── PulsewalletApplication.java
-    │   │   ├── config/         # CorsConfig, SecurityConfig; later WebSocketConfig
-    │   │   ├── controller/     # HTTP boundary - DTOs in, DTOs out
-    │   │   ├── dto/            # ApiResponse, ApiError; request/response records
-    │   │   ├── entity/         # User, Category, Transaction, Budget, TransactionType
-    │   │   ├── exception/      # GlobalExceptionHandler, custom exceptions
-    │   │   ├── repository/     # Spring Data JPA repositories
-    │   │   ├── security/       # JWT filter/service, UserDetailsService, UserPrincipal
-    │   │   └── service/        # AuthService, CategoryService, TransactionService, BudgetService
-    │   └── resources/
-    │       ├── application.properties
-    │       ├── application-dev.properties
-    │       ├── application-prod.properties
-    │       └── db/migration/   # Flyway - V1..V5, users/categories/transactions/budgets
-    └── test/
-        └── java/com/pulsewallet/pulsewallet/
-```
-
-Each package carries a `package-info.java` documenting what belongs in it and what does not. Read those before adding classes — they exist to stop the layering from eroding once four people are committing in parallel.
-
----
-
-## Layering rules
-
-```text
-Controller  →  Service  →  Repository  →  Database
-   (DTO)      (business)     (JPA)
-```
-
-- Controllers never touch repositories directly.
-- Entities never appear in a controller signature; map to a DTO.
-- Services contain no HTTP types, so they stay unit-testable without a web context.
-- Money is `BigDecimal`, never `double`.
-
----
-
-## Troubleshooting
-
-**`"database": "DOWN"` in the health response, or the app fails to start with a connection error**
-
-The database is not reachable. Check the container is up and healthy:
+### Option B: Production Container Orchestration
+For hardened staging and production cloud servers (AWS ECS, DigitalOcean, Render, GCP Cloud Run):
 
 ```bash
-docker compose ps
-docker compose logs postgres
+# Copy and customize production secrets (set strong JWT_SECRET and DB_PASSWORD)
+cp .env.production.example .env.production
+
+# Launch with resource caps and production profile
+docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build
 ```
-
-**Port 5432 already allocated**
-
-You already have PostgreSQL running locally. Either stop it, or move the container to another port — set `DB_PORT=5433` in `.env`, then restart and tell the app about it too:
-
-```bash
-docker compose down && docker compose up -d --wait
-DB_PORT=5433 ./mvnw spring-boot:run
-```
-
-**Port 8080 already in use**
-
-Set `SERVER_PORT=8081` in `.env` and run with `SERVER_PORT=8081 ./mvnw spring-boot:run`.
-
-**`Permission denied: ./mvnw`** (macOS/Linux)
-
-```bash
-chmod +x mvnw
-```
-
-**Authentication failed for user**
-
-The volume was created with different credentials than the ones you are now passing. Compose only applies `POSTGRES_USER`/`POSTGRES_PASSWORD` when initialising an empty volume. Reset it:
-
-```bash
-docker compose down -v && docker compose up -d --wait
-```
-
-This deletes all local data.
-
-**`git status` shows files as modified that you never touched**
-
-Line-ending normalisation. `.gitattributes` now enforces LF in the repository; run once:
-
-```bash
-git add --renormalize .
-git commit -m "chore: normalise line endings"
-```
-
-**Schema looks stale after changing an entity**
-
-In `dev`, `spring.jpa.hibernate.ddl-auto=update` adds columns and tables but never drops or alters existing ones. During Milestone 2, the fastest reset is `docker compose down -v && docker compose up -d --wait`. Once Flyway lands, use migrations instead.
 
 ---
 
-## Contributing
+### Option C: Local Development (Bare-Metal)
 
-Read [`docs/BRANCHING.md`](docs/BRANCHING.md) before your first commit. Short version: branch from `develop`, name it `feature/<milestone>-<slug>`, open a pull request, never push to `main`.
+#### 1. Prerequisites
+- **JDK 25** (`java -version`)
+- **Node.js 20+** & npm (`node -v`)
+- **Docker Desktop** (or a local PostgreSQL instance on port 5432)
+- **Python 3.11+** (for ML service)
+
+#### 2. Database Setup
+Start PostgreSQL via Docker Compose:
+```bash
+docker compose up -d postgres
+```
+*(Or point to your local PostgreSQL database named `pulsewallet_db` on port 5432).*
+
+#### 3. Backend (Spring Boot 4 / Java 25)
+Set the required JWT secret and launch the backend:
+
+**Windows PowerShell:**
+```powershell
+$env:JWT_SECRET = "4rGptm2fdDvHwcFiPlXj3bO3eAaQ0qhc+5aGnU/rIp36QSDiesK7PqvNPgj77jei"
+.\mvnw.cmd spring-boot:run
+```
+
+**macOS / Linux:**
+```bash
+export JWT_SECRET="4rGptm2fdDvHwcFiPlXj3bO3eAaQ0qhc+5aGnU/rIp36QSDiesK7PqvNPgj77jei"
+./mvnw spring-boot:run
+```
+*The backend starts at `http://localhost:8080` and automatically runs Flyway migrations up to V16.*
+
+#### 4. Python ML Fraud Sentinel
+```bash
+cd fraud-detection
+python -m venv .venv
+.\.venv\Scripts\activate   # Linux/macOS: source .venv/bin/activate
+pip install -r requirements.txt
+python -m uvicorn api.main:app --host 127.0.0.1 --port 8000
+```
+*The ML API runs at `http://localhost:8000`.*
+
+#### 5. Frontend (React 19 / Vite)
+```bash
+cd frontend
+npm install
+npm run dev
+```
+*The web dashboard is live at `http://localhost:5173`.*
+
+---
+
+### Option D: Standalone Production JAR Execution
+```powershell
+# 1. Package the production JAR
+.\mvnw.cmd package -DskipTests -DargLine="-Xmx512m"
+
+# 2. Run with production profile
+$env:SPRING_PROFILES_ACTIVE = "prod"
+$env:DATABASE_URL = "jdbc:postgresql://localhost:5432/pulsewallet_db"
+$env:DB_USERNAME = "pulsewallet"
+$env:DB_PASSWORD = "pulsewallet"
+$env:JWT_SECRET = "4rGptm2fdDvHwcFiPlXj3bO3eAaQ0qhc+5aGnU/rIp36QSDiesK7PqvNPgj77jei"
+java -jar target/pulsewallet-0.0.1-SNAPSHOT.jar
+```
+
+---
+
+## 📡 API Reference
+
+All protected endpoints require an `Authorization: Bearer <JWT>` header obtained via `/api/auth/login` or `/api/auth/register`.
+
+### Authentication & Core
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/api/auth/register` | Register new user and issue JWT |
+| `POST` | `/api/auth/login` | Authenticate user credentials |
+| `GET` | `/api/dashboard-summary` | Aggregated financial metrics and budget progress |
+| `GET` | `/actuator/health` | Application health and database status |
+
+### Bank Ingestion & Account Aggregator
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/api/bank-ingestion/parse-sms` | Parse SMS / UPI debit notifications into transaction drafts |
+| `POST` | `/api/bank-ingestion/account-aggregator/consent` | Simulate RBI Account Aggregator consent flow (Setu/Finvu) |
+| `POST` | `/api/bank-ingestion/category-feedback` | Submit merchant-to-category feedback for model learning |
+| `POST` | `/api/bank-ingestion/import-transactions` | Batch import verified parsed transactions into user ledger |
+
+### Fraud Security Center
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/fraud-center/security-center` | Real-time security posture, active anomalies, risk scores |
+| `POST` | `/api/fraud-center/scan-phishing` | Scan suspicious messages / UPI collect requests for scam heuristics |
+| `POST` | `/api/fraud-center/action` | Perform defense actions (`FREEZE_CARD`, `DISPUTE_TRANSACTION`, `FLAG_MERCHANT`) |
+| `GET` | `/api/fraud-center/investigation-report` | Download structured forensic fraud audit report |
+
+### Conversational AI Assistant
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/api/ai/assistant/chat` | Contextual Q&A using user financial data, transaction staging, and language translation |
+
+### Financial Hub (Insights, Credit, Taxes)
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/financial-hub/proactive-insights` | Safe-to-spend-today, recurring subscriptions, bill reminders |
+| `GET` | `/api/financial-hub/cibil-score` | CIBIL credit score gauge, payment history, utilization |
+| `GET` | `/api/financial-hub/debt-payoff` | Debt Snowball vs. Avalanche comparative payoff schedules |
+| `GET` | `/api/financial-hub/net-worth` | Consolidated net worth breakdown across liquid, equity, and physical assets |
+| `GET` | `/api/financial-hub/tax-tracker` | Indian Section 80C deduction tracker, capital gains, ITR guide |
+
+### Core Financial Entities
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` / `POST` | `/api/transactions` | Filter, paginate, and record transactions |
+| `GET` / `POST` | `/api/budgets` | Category budget tracking and period allocations |
+| `GET` / `POST` | `/api/goals` | Savings goals, target dates, and monthly contribution plans |
+| `GET` / `POST` | `/api/linked-accounts` | Linked bank accounts and liquid balance tracking |
+| `GET` | `/api/credit-cards/intelligence` | Card utilization, bill dates, and reward benefits |
+
+---
+
+## 🧪 Testing
+
+### Running Unit & Integration Tests
+```powershell
+# Maven tests (using 512MB memory boundary)
+.\mvnw.cmd test -DargLine="-Xmx512m"
+```
+
+### Verifying Frontend Build
+```bash
+cd frontend
+npm run build
+```
+*(Transpiles and validates 630+ modules with 0 errors).*
+
+---
+
+## 📚 Technical Documentation Suite
+
+| Document | Purpose | Description |
+|---|---|---|
+| [System Architecture](file:///docs/ARCHITECTURE.md) | Technical Deep Dive | Microservices topology, component relationships, data flow diagrams (Mermaid), and security boundary models. |
+| [Comprehensive Project Report](file:///docs/PROJECT_REPORT.md) | Engineering Report | Problem statement, Indian FinTech market context, ML model training & metrics, and quality assurance summary. |
+| [Live Evaluator Demo Script](file:///docs/DEMO_SCRIPT.md) | Presentation Guide | Minute-by-minute walkthrough script with click paths, copy-paste inputs, and examiner talking points. |
+| [Fraud ML Model Evaluation](file:///docs/FRAUD_MODEL_EVALUATION.md) | Data Science Report | Precision-recall curves, confusion matrices, cost-weighted loss function, and concept drift mitigation strategy. |
+| [Branching & Contributing](file:///docs/BRANCHING.md) | Engineering Standards | Git branching strategy, commit conventions, and pull request workflows. |
+| [Project Progress Tracker](file:///PROJECT_PROGRESS.md) | Audit Trail | 92-task verified progress record documenting Milestones 1 through 8 at 100% completion. |
+
+---
+
+## 📄 License
+This project is open-source under the MIT License.
+

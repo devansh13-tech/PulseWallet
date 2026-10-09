@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.pulsewallet.pulsewallet.dto.AdvisoryResponse;
 import com.pulsewallet.pulsewallet.dto.ApiResponse;
+import com.pulsewallet.pulsewallet.dto.MonthlyAdviceResponse;
 import com.pulsewallet.pulsewallet.security.UserPrincipal;
 import com.pulsewallet.pulsewallet.service.AdvisoryService;
 
@@ -23,5 +24,10 @@ public class AdvisoryController {
     @GetMapping("/advisory")
     public ApiResponse<AdvisoryResponse> advisory(@AuthenticationPrincipal UserPrincipal principal) {
         return ApiResponse.ok(advisoryService.advice(principal.getId()));
+    }
+
+    @GetMapping("/advice/monthly")
+    public ApiResponse<MonthlyAdviceResponse> monthlyAdvice(@AuthenticationPrincipal UserPrincipal principal) {
+        return ApiResponse.ok(advisoryService.monthlyAdvice(principal.getId()));
     }
 }

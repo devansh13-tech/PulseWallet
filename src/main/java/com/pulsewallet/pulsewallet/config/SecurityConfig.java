@@ -71,8 +71,7 @@ public class SecurityConfig {
         return Clock.systemDefaultZone();
     }
 
-    @Bean
-    public JwtAuthenticationFilter jwtAuthenticationFilter() {
+    private JwtAuthenticationFilter jwtAuthenticationFilter() {
         return new JwtAuthenticationFilter(jwtService, userDetailsService);
     }
 
@@ -93,6 +92,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/health").permitAll()
                         .requestMatchers("/actuator/**").permitAll()
+                        .requestMatchers("/api/market/**").permitAll()
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
         return http.build();

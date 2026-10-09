@@ -1,17 +1,16 @@
 # ==============================================================================
-# PulseWallet - local development infrastructure
+# PulseWallet - Multi-Container Orchestration (Development & Staging)
 #
-#   docker compose up -d                  # PostgreSQL only (what you need daily)
-#   docker compose --profile tools up -d   # + pgAdmin on http://localhost:5050
-#   docker compose down                    # stop, keep data
-#   docker compose down -v                 # stop AND wipe the database volume
-#
-# Values come from the .env file in this directory (copy it from .env.example).
-# Every variable has a working default, so `docker compose up -d` succeeds even
-# with no .env present.
+# Usage:
+#   docker compose up -d                  # Start entire stack (Postgres + ML + Spring Boot + Frontend)
+#   docker compose up -d postgres         # Start only database
+#   docker compose --profile tools up -d  # Include pgAdmin UI (http://localhost:5050)
+#   docker compose down                   # Stop containers, keep volumes
+#   docker compose down -v                # Stop and wipe database volume
 # ==============================================================================
 
 services:
+  # 1. Relational Database
   postgres:
     image: postgres:18-alpine
     container_name: pulsewallet-postgres
@@ -20,27 +19,98 @@ services:
       POSTGRES_DB: ${DB_NAME:-pulsewallet_db}
       POSTGRES_USER: ${DB_USERNAME:-pulsewallet}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-pulsewallet}
-      # Speeds up local restarts; never use this in production.
       POSTGRES_INITDB_ARGS: "--data-checksums"
     ports:
-      # Host port is configurable: if you already run Postgres on 5432,
-      # set DB_PORT=5433 in .env instead of fighting the conflict.
       - "${DB_PORT:-5432}:5432"
     volumes:
       - pulsewallet-pgdata:/var/lib/postgresql/data
     networks:
       - pulsewallet-net
     healthcheck:
-      # Spring Boot starts much faster than Postgres accepts connections.
-      # This lets `docker compose up --wait` block until the DB is truly ready.
       test: [ "CMD-SHELL", "pg_isready -U ${DB_USERNAME:-pulsewallet} -d ${DB_NAME:-pulsewallet_db}" ]
       interval: 5s
       timeout: 5s
       retries: 12
       start_period: 10s
 
-  # Optional GUI for inspecting tables during development.
-  # Gated behind a compose profile so it never slows down the default startup.
+  # 2. Python FastAPI Fraud Detection Engine (XGBoost)
+  fraud-detection:
+    build:
+      context: ./fraud-detection
+      dockerfile: Dockerfile
+    container_name: pulsewallet-fraud-detection
+    restart: unless-stopped
+    environment:
+      PORT: 8000
+      FRAUD_SCORE_THRESHOLD: ${FRAUD_SCORE_THRESHOLD:-0.5}
+    ports:
+      - "8000:8000"
+    networks:
+      - pulsewallet-net
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -f http://localhost:8000/health || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  # 3. Spring Boot Backend Application (Java 25)
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: pulsewallet-backend
+    restart: unless-stopped
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
+      SERVER_PORT: 8080
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-pulsewallet_db}
+      DB_USERNAME: ${DB_USERNAME:-pulsewallet}
+      DB_PASSWORD: ${DB_PASSWORD:-pulsewallet}
+      JWT_SECRET: ${JWT_SECRET:-4rGptm2fdDvHwcFiPlXj3bO3eAaQ0qhc+5aGnU/rIp36QSDiesK7PqvNPgj77jei}
+      FRAUD_API_URL: http://fraud-detection:8000
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost,http://localhost:80,http://localhost:5173,http://localhost:3000}
+      PULSEWALLET_BASE_CURRENCY: ${PULSEWALLET_BASE_CURRENCY:-INR}
+    ports:
+      - "${SERVER_PORT:-8080}:8080"
+    networks:
+      - pulsewallet-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+      fraud-detection:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD-SHELL", "wget --quiet --tries=1 --spider http://localhost:8080/actuator/health || exit 1" ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 35s
+
+  # 4. React Vite Frontend with Nginx Reverse Proxy
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: pulsewallet-frontend
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-80}:80"
+    networks:
+      - pulsewallet-net
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD-SHELL", "wget --quiet --tries=1 --spider http://localhost/health || exit 1" ]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+  # 5. Database Inspection GUI (Optional Dev Profile)
   pgadmin:
     image: dpage/pgadmin4:8
     container_name: pulsewallet-pgadmin
@@ -59,8 +129,6 @@ services:
       postgres:
         condition: service_healthy
 
-# Named explicitly because the Milestone 4 fraud-detection service (FastAPI)
-# will join this same network to reach Postgres by hostname.
 networks:
   pulsewallet-net:
     name: pulsewallet-net

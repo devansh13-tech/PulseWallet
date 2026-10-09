@@ -4,6 +4,7 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 
 import com.pulsewallet.pulsewallet.entity.Category;
+import com.pulsewallet.pulsewallet.entity.TransactionType;
 import com.pulsewallet.pulsewallet.repository.CategoryRepository;
 
 /**
@@ -42,6 +43,9 @@ public class ExpenseCategorizationService {
         List<Category> categories = categoryRepository.findByUserIdOrUserIsNull(userId);
 
         for (Category category : categories) {
+            if (category.getType() != null && category.getType() != TransactionType.EXPENSE) {
+                continue;
+            }
             String categoryName = category.getName().toLowerCase();
 
             if (categoryName.equals("groceries") &&

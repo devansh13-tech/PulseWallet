@@ -33,7 +33,34 @@ public record CreditCardIntelligenceResponse(
             String rewardsDescription,
             String benefitsDescription,
             List<String> warnings,
-            List<String> recommendations) {
+            List<String> recommendations,
+            BigDecimal statementBalance,
+            BigDecimal minimumDue,
+            String freshnessStatus,
+            String dataSource) {
+
+        public CardHealth(
+                Long id,
+                String cardName,
+                String issuer,
+                String lastFourDigits,
+                BigDecimal creditLimit,
+                BigDecimal currentOutstanding,
+                BigDecimal availableCredit,
+                BigDecimal utilizationPercentage,
+                String utilizationLevel,
+                String healthStatus,
+                LocalDate statementDate,
+                LocalDate dueDate,
+                String rewardsDescription,
+                String benefitsDescription,
+                List<String> warnings,
+                List<String> recommendations) {
+            this(id, cardName, issuer, lastFourDigits, creditLimit, currentOutstanding,
+                    availableCredit, utilizationPercentage, utilizationLevel, healthStatus,
+                    statementDate, dueDate, rewardsDescription, benefitsDescription, warnings,
+                    recommendations, null, null, "FRESH", "MANUAL");
+        }
     }
 
     public record CreditCardSummary(

@@ -17,6 +17,8 @@ import org.springframework.web.bind.annotation.RestController;
 import com.pulsewallet.pulsewallet.dto.ApiResponse;
 import com.pulsewallet.pulsewallet.dto.FinancialGoalRequest;
 import com.pulsewallet.pulsewallet.dto.FinancialGoalResponse;
+import com.pulsewallet.pulsewallet.dto.GoalAchievementResponse;
+import com.pulsewallet.pulsewallet.dto.GoalPlanResponse;
 import com.pulsewallet.pulsewallet.security.UserPrincipal;
 import com.pulsewallet.pulsewallet.service.FinancialGoalService;
 
@@ -41,6 +43,18 @@ public class FinancialGoalController {
     public ApiResponse<FinancialGoalResponse> get(@PathVariable Long id,
             @AuthenticationPrincipal UserPrincipal principal) {
         return ApiResponse.ok(financialGoalService.get(id, principal.getId()));
+    }
+
+    @GetMapping("/{id}/plan")
+    public ApiResponse<GoalPlanResponse> getPlan(@PathVariable Long id,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        return ApiResponse.ok(financialGoalService.getPlan(id, principal.getId()));
+    }
+
+    @GetMapping("/{id}/achievement")
+    public ApiResponse<GoalAchievementResponse> getAchievement(@PathVariable Long id,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        return ApiResponse.ok(financialGoalService.getAchievement(id, principal.getId()));
     }
 
     @PostMapping

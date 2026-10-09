@@ -14,6 +14,16 @@ import AlertsPage from './pages/AlertsPage.jsx'
 import GoalsPage from './pages/GoalsPage.jsx'
 import FinancialPlanPage from './pages/FinancialPlanPage.jsx'
 import CreditCardsPage from './pages/CreditCardsPage.jsx'
+import LinkedPaymentAccountsPage from './pages/LinkedPaymentAccountsPage.jsx'
+import BankIngestionPage from './pages/BankIngestionPage.jsx'
+import FraudSecurityCenterPage from './pages/FraudSecurityCenterPage.jsx'
+import ProactiveInsightsPage from './pages/ProactiveInsightsPage.jsx'
+import CreditAndNetWorthPage from './pages/CreditAndNetWorthPage.jsx'
+import InvestmentsAmfiPage from './pages/InvestmentsAmfiPage.jsx'
+import GamificationAndSocialPage from './pages/GamificationAndSocialPage.jsx'
+
+import { FloatingPageNav } from './components/PageNavigation.jsx'
+import PulseAiAssistant from './components/PulseAiAssistant.jsx'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
@@ -25,6 +35,12 @@ createRoot(document.getElementById('root')).render(
 
           <Route element={<ProtectedRoute />}>
             <Route path="/" element={<App />} />
+            <Route path="/bank-ingestion" element={<BankIngestionPage />} />
+            <Route path="/fraud-center" element={<FraudSecurityCenterPage />} />
+            <Route path="/insights" element={<ProactiveInsightsPage />} />
+            <Route path="/credit-networth" element={<CreditAndNetWorthPage />} />
+            <Route path="/investments" element={<InvestmentsAmfiPage />} />
+            <Route path="/social-family" element={<GamificationAndSocialPage />} />
             <Route path="/transactions" element={<TransactionsPage />} />
             <Route path="/transactions/new" element={<TransactionPage />} />
             <Route path="/budgets" element={<BudgetsPage />} />
@@ -32,8 +48,10 @@ createRoot(document.getElementById('root')).render(
             <Route path="/goals" element={<GoalsPage />} />
             <Route path="/financial-plan" element={<FinancialPlanPage />} />
             <Route path="/credit-cards" element={<CreditCardsPage />} />
+            <Route path="/linked-accounts" element={<LinkedPaymentAccountsPage />} />
           </Route>
         </Routes>
+        <PulseAiAssistant />
       </AuthProvider>
     </BrowserRouter>
   </StrictMode>,

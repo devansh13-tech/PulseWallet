@@ -99,6 +99,13 @@
 			<artifactId>spring-boot-starter-flyway</artifactId>
 		</dependency>
 
+		<!-- Milestone 5.11: Apache PDFBox for credit card statement PDF parsing and field extraction. -->
+		<dependency>
+			<groupId>org.apache.pdfbox</groupId>
+			<artifactId>pdfbox</artifactId>
+			<version>3.0.4</version>
+		</dependency>
+
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-devtools</artifactId>
@@ -171,6 +178,9 @@
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
+				<configuration>
+					<jvmArguments>-Xmx512m</jvmArguments>
+				</configuration>
 			</plugin>
 		</plugins>
 	</build>

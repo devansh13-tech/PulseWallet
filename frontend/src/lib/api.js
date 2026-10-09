@@ -44,7 +44,8 @@ export function clearToken() {
  * @throws {ApiError}        – { message, fieldErrors, status }
  */
 async function request(path, { method = 'GET', body, params, auth = true } = {}) {
-  const headers = { 'Content-Type': 'application/json' };
+  const isFormData = typeof FormData !== 'undefined' && body instanceof FormData;
+  const headers = isFormData ? {} : { 'Content-Type': 'application/json' };
 
   if (auth) {
     const token = getToken();
@@ -70,7 +71,7 @@ async function request(path, { method = 'GET', body, params, auth = true } = {})
     response = await fetch(url, {
       method,
       headers,
-      body: body != null ? JSON.stringify(body) : undefined,
+      body: isFormData ? body : (body != null ? JSON.stringify(body) : undefined),
     });
   } catch (err) {
     throw {
@@ -180,6 +181,12 @@ export const recommendationApi = {
   get: () => request('/api/recommendations'),
 };
 
+/** Live Indian Market Indices (Sensex & Nifty), Gainers/Losers, and AI context */
+export const marketApi = {
+  indices: (range = '1D') => request('/api/market/indices', { params: { range } }),
+  movers: () => request('/api/market/movers'),
+};
+
 /** Savings and investment intelligence */
 export const financialPlanApi = {
   get: () => request('/api/financial-plan'),
@@ -219,6 +226,22 @@ export const creditCardApi = {
   delete: (id) => request(`/api/credit-cards/${id}`, { method: 'DELETE' }),
   intelligence: () => request('/api/credit-cards/intelligence'),
   purchaseCheck: (body) => request('/api/credit-cards/purchase-check', { method: 'POST', body }),
+  identify: (body) => request('/api/credit-cards/identify', { method: 'POST', body }),
+  parseStatement: (formData) => request('/api/credit-cards/statements/parse', { method: 'POST', body: formData }),
+  confirmStatement: (body) => request('/api/credit-cards/statements/confirm', { method: 'POST', body }),
+  benefits: (id) => request(`/api/credit-cards/${id}/benefits`),
+  bankSyncStatus: () => request('/api/credit-cards/bank-sync/status'),
+  bankSyncConsent: (body) => request('/api/credit-cards/bank-sync/consent', { method: 'POST', body }),
+};
+
+/** Linked payment account connection records */
+export const linkedPaymentAccountApi = {
+  list: () => request('/api/linked-accounts'),
+  get: (id) => request(`/api/linked-accounts/${id}`),
+  create: (body) => request('/api/linked-accounts', { method: 'POST', body }),
+  updateBalance: (id, balance) => request(`/api/linked-accounts/${id}/balance`, { method: 'PATCH', body: { balance } }),
+  disconnect: (id) => request(`/api/linked-accounts/${id}/disconnect`, { method: 'PATCH' }),
+  delete: (id) => request(`/api/linked-accounts/${id}`, { method: 'DELETE' }),
 };
 
 /** Exchange rates */
@@ -230,3 +253,34 @@ export const exchangeRateApi = {
 export const fraudApi = {
   check: (body) => request('/api/fraud/check', { method: 'POST', body }),
 };
+
+/** Bank & Transaction Ingestion (AA, SMS Parser, Auto-Categorization) */
+export const bankIngestionApi = {
+  parseSms: (body) => request('/api/bank-ingestion/parse-sms', { method: 'POST', body }),
+  accountAggregatorConsent: (body) => request('/api/bank-ingestion/account-aggregator/consent', { method: 'POST', body }),
+  categoryFeedback: (body) => request('/api/bank-ingestion/category-feedback', { method: 'POST', body }),
+  batchImport: (body) => request('/api/bank-ingestion/import-transactions', { method: 'POST', body }),
+};
+
+/** Advanced Fraud Security Center */
+export const advancedFraudApi = {
+  getSecurityCenter: () => request('/api/fraud-center/security-center'),
+  scanPhishing: (body) => request('/api/fraud-center/scan-phishing', { method: 'POST', body }),
+  takeAction: (body) => request('/api/fraud-center/action', { method: 'POST', body }),
+  getInvestigationReport: () => request('/api/fraud-center/investigation-report'),
+};
+
+/** Conversational AI Financial Assistant */
+export const aiAssistantApi = {
+  chat: (body) => request('/api/ai/assistant/chat', { method: 'POST', body }),
+};
+
+/** Proactive Insights, CIBIL, Debt Payoff, Net Worth, Tax */
+export const financialHubApi = {
+  getProactiveInsights: () => request('/api/financial-hub/proactive-insights'),
+  getCibilScore: () => request('/api/financial-hub/cibil-score'),
+  getDebtPayoff: () => request('/api/financial-hub/debt-payoff'),
+  getNetWorth: () => request('/api/financial-hub/net-worth'),
+  getTaxTracker: () => request('/api/financial-hub/tax-tracker'),
+};
+

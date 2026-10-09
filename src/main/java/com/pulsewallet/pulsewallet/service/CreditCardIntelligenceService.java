@@ -48,14 +48,25 @@ public class CreditCardIntelligenceService {
     private final CreditCardRepository creditCardRepository;
     private final FinancialPlanService financialPlanService;
     private final Clock clock;
+    private final com.pulsewallet.pulsewallet.service.benefits.CardBenefitCatalogueService cardBenefitCatalogueService;
 
     public CreditCardIntelligenceService(
             CreditCardRepository creditCardRepository,
             FinancialPlanService financialPlanService,
             Clock clock) {
+        this(creditCardRepository, financialPlanService, clock, new com.pulsewallet.pulsewallet.service.benefits.CardBenefitCatalogueService());
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public CreditCardIntelligenceService(
+            CreditCardRepository creditCardRepository,
+            FinancialPlanService financialPlanService,
+            Clock clock,
+            com.pulsewallet.pulsewallet.service.benefits.CardBenefitCatalogueService cardBenefitCatalogueService) {
         this.creditCardRepository = creditCardRepository;
         this.financialPlanService = financialPlanService;
         this.clock = clock;
+        this.cardBenefitCatalogueService = cardBenefitCatalogueService;
     }
 
     // -----------------------------------------------------------------------
@@ -113,7 +124,7 @@ public class CreditCardIntelligenceService {
         String overallStatus = "SAFE";
 
         for (CreditCard card : cards) {
-            CardAssessment assessment = assessCard(card, request.amount());
+            CardAssessment assessment = assessCard(card, request.amount(), request.category());
             assessments.add(assessment);
 
             if ("NOT_RECOMMENDED".equals(assessment.safetyStatus())) {
@@ -200,6 +211,14 @@ public class CreditCardIntelligenceService {
             recommendations.add(card.getCardName() + " has zero outstanding — healthy usage.");
         }
 
+        String freshness = com.pulsewallet.pulsewallet.dto.CreditCardResponse.computeFreshnessStatus(
+                card.getLastStatementSyncAt(), card.getUpdatedAt());
+        if ("STALE".equals(freshness)) {
+            warnings.add("Data for " + card.getCardName() + " has not been updated in over 35 days. Upload your latest statement to keep tracking accurate.");
+        }
+
+        String source = card.getDataSource() != null ? card.getDataSource() : "MANUAL";
+
         return new CardHealth(
                 card.getId(),
                 card.getCardName(),
@@ -216,7 +235,11 @@ public class CreditCardIntelligenceService {
                 card.getRewardsDescription(),
                 card.getBenefitsDescription(),
                 warnings,
-                recommendations);
+                recommendations,
+                card.getStatementBalance(),
+                card.getMinimumDue(),
+                freshness,
+                source);
     }
 
     // -----------------------------------------------------------------------
@@ -309,7 +332,11 @@ public class CreditCardIntelligenceService {
     // Per-card purchase assessment
     // -----------------------------------------------------------------------
 
-    private CardAssessment assessCard(CreditCard card, BigDecimal purchaseAmount) {
+    CardAssessment assessCard(CreditCard card, BigDecimal purchaseAmount) {
+        return assessCard(card, purchaseAmount, "GENERAL");
+    }
+
+    CardAssessment assessCard(CreditCard card, BigDecimal purchaseAmount, String category) {
         BigDecimal available = availableCredit(card);
         BigDecimal projectedOutstanding = scale(card.getCurrentOutstanding().add(purchaseAmount));
         BigDecimal projectedUtil = card.getCreditLimit().signum() == 0 ? ZERO
@@ -337,6 +364,9 @@ public class CreditCardIntelligenceService {
                     + " with projected utilization at " + projectedUtil + "%.");
         }
 
+        com.pulsewallet.pulsewallet.dto.EstimatedRewardDto reward =
+                cardBenefitCatalogueService.estimateReward(card, category, purchaseAmount);
+
         return new CardAssessment(
                 card.getId(),
                 card.getCardName(),
@@ -348,7 +378,15 @@ public class CreditCardIntelligenceService {
                 projectedOutstanding,
                 projectedUtil,
                 safetyStatus,
-                reasons);
+                reasons,
+                reward);
+    }
+
+    @Transactional(readOnly = true)
+    public com.pulsewallet.pulsewallet.dto.CardBenefitsResponse getCardBenefits(Long cardId, Long userId) {
+        CreditCard card = creditCardRepository.findByIdAndUserId(cardId, userId)
+                .orElseThrow(() -> new com.pulsewallet.pulsewallet.exception.ResourceNotFoundException("Credit card", cardId));
+        return cardBenefitCatalogueService.getBenefitsForCard(card);
     }
 
     // -----------------------------------------------------------------------

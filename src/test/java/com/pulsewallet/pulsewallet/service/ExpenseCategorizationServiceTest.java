@@ -28,48 +28,138 @@ class ExpenseCategorizationServiceTest {
     private ExpenseCategorizationService categorizationService;
 
     private Category groceries;
+    private Category foodAndDining;
+    private Category rent;
+    private Category utilities;
     private Category transportation;
+    private Category healthcare;
+    private Category entertainment;
+    private Category shopping;
+    private Category education;
     private Category otherExpense;
+    private Category salary;
 
     @BeforeEach
     void setUp() {
         categorizationService = new ExpenseCategorizationService(categoryRepository);
 
         groceries = TestEntities.withId(new Category("Groceries", TransactionType.EXPENSE, null), 1L);
-        transportation = TestEntities.withId(new Category("Transportation", TransactionType.EXPENSE, null), 2L);
-        otherExpense = TestEntities.withId(new Category("Other Expense", TransactionType.EXPENSE, null), 3L);
+        foodAndDining = TestEntities.withId(new Category("Food & Dining", TransactionType.EXPENSE, null), 2L);
+        rent = TestEntities.withId(new Category("Rent", TransactionType.EXPENSE, null), 3L);
+        utilities = TestEntities.withId(new Category("Utilities", TransactionType.EXPENSE, null), 4L);
+        transportation = TestEntities.withId(new Category("Transportation", TransactionType.EXPENSE, null), 5L);
+        healthcare = TestEntities.withId(new Category("Healthcare", TransactionType.EXPENSE, null), 6L);
+        entertainment = TestEntities.withId(new Category("Entertainment", TransactionType.EXPENSE, null), 7L);
+        shopping = TestEntities.withId(new Category("Shopping", TransactionType.EXPENSE, null), 8L);
+        education = TestEntities.withId(new Category("Education", TransactionType.EXPENSE, null), 9L);
+        otherExpense = TestEntities.withId(new Category("Other Expense", TransactionType.EXPENSE, null), 10L);
+        salary = TestEntities.withId(new Category("Salary", TransactionType.INCOME, null), 11L);
     }
 
     private void stubCategories() {
         when(categoryRepository.findByUserIdOrUserIsNull(USER_ID))
-                .thenReturn(List.of(groceries, transportation, otherExpense));
+                .thenReturn(List.of(
+                        salary,
+                        groceries,
+                        foodAndDining,
+                        rent,
+                        utilities,
+                        transportation,
+                        healthcare,
+                        entertainment,
+                        shopping,
+                        education,
+                        otherExpense));
     }
 
     @Test
-    void categorize_matchesGroceryKeywords() {
+    void categorize_swiggyMapsToFoodAndDining() {
         stubCategories();
 
-        Category result = categorizationService.categorize("Bought milk from the store", USER_ID);
+        Category result = categorizationService.categorize("Swiggy dinner", USER_ID);
 
-        assertThat(result).isSameAs(groceries);
+        assertThat(result).isSameAs(foodAndDining);
     }
 
     @Test
-    void categorize_matchesTransportationKeywords() {
+    void categorize_uberMapsToTransportation() {
         stubCategories();
 
-        Category result = categorizationService.categorize("Uber ride to office", USER_ID);
+        Category result = categorizationService.categorize("Uber ride", USER_ID);
 
         assertThat(result).isSameAs(transportation);
     }
 
     @Test
-    void categorize_fallsBackToOtherExpenseWhenNoRuleMatches() {
+    void categorize_electricityBillMapsToUtilities() {
+        stubCategories();
+
+        Category result = categorizationService.categorize("Electricity bill", USER_ID);
+
+        assertThat(result).isSameAs(utilities);
+    }
+
+    @Test
+    void categorize_amazonPurchaseMapsToShopping() {
+        stubCategories();
+
+        Category result = categorizationService.categorize("Amazon purchase", USER_ID);
+
+        assertThat(result).isSameAs(shopping);
+    }
+
+    @Test
+    void categorize_pharmacyMapsToHealthcare() {
+        stubCategories();
+
+        Category result = categorizationService.categorize("Pharmacy", USER_ID);
+
+        assertThat(result).isSameAs(healthcare);
+    }
+
+    @Test
+    void categorize_collegeFeesMapsToEducation() {
+        stubCategories();
+
+        Category result = categorizationService.categorize("College fees", USER_ID);
+
+        assertThat(result).isSameAs(education);
+    }
+
+    @Test
+    void categorize_rentPaymentMapsToRent() {
+        stubCategories();
+
+        Category result = categorizationService.categorize("Rent payment", USER_ID);
+
+        assertThat(result).isSameAs(rent);
+    }
+
+    @Test
+    void categorize_netflixMapsToEntertainment() {
+        stubCategories();
+
+        Category result = categorizationService.categorize("Netflix", USER_ID);
+
+        assertThat(result).isSameAs(entertainment);
+    }
+
+    @Test
+    void categorize_milkMapsToGroceries() {
+        stubCategories();
+
+        Category result = categorizationService.categorize("Milk", USER_ID);
+
+        assertThat(result).isSameAs(groceries);
+    }
+
+    @Test
+    void categorize_unknownExpenseFallsBackToOtherExpense() {
         stubCategories();
         when(categoryRepository.findByNameAndUserIsNull("Other Expense"))
                 .thenReturn(Optional.of(otherExpense));
 
-        Category result = categorizationService.categorize("Random purchase xyz", USER_ID);
+        Category result = categorizationService.categorize("Unknown local purchase", USER_ID);
 
         assertThat(result).isSameAs(otherExpense);
     }
@@ -89,6 +179,17 @@ class ExpenseCategorizationServiceTest {
                 .thenReturn(Optional.of(otherExpense));
 
         Category result = categorizationService.categorize("   ", USER_ID);
+
+        assertThat(result).isSameAs(otherExpense);
+    }
+
+    @Test
+    void categorize_ignoresIncomeCategories() {
+        stubCategories();
+        when(categoryRepository.findByNameAndUserIsNull("Other Expense"))
+                .thenReturn(Optional.of(otherExpense));
+
+        Category result = categorizationService.categorize("Salary bonus deduction", USER_ID);
 
         assertThat(result).isSameAs(otherExpense);
     }
